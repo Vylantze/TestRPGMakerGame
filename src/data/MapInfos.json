@@ -1,0 +1,30 @@
+[
+  null,
+  {
+    "id": 1,
+    "expanded": true,
+    "name": "Briar Glen",
+    "order": 1,
+    "parentId": 0,
+    "scrollX": 0,
+    "scrollY": 0
+  },
+  {
+    "id": 2,
+    "expanded": true,
+    "name": "Abandoned Shrine • Approach",
+    "order": 2,
+    "parentId": 0,
+    "scrollX": 0,
+    "scrollY": 0
+  },
+  {
+    "id": 3,
+    "expanded": true,
+    "name": "Abandoned Shrine • Inner Court",
+    "order": 3,
+    "parentId": 0,
+    "scrollX": 0,
+    "scrollY": 0
+  }
+]

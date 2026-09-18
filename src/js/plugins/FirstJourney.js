@@ -1,0 +1,274 @@
+/*:
+ * @target MZ
+ * @plugindesc First Journey: map combat, companion control, skill journal and checkpoints.
+ * @author Project
+ * @help
+ * Requires FirstJourneyRules above this plugin. Start a NEW GAME.
+ * Arrows: move one turn. Z/Enter: interact. Space: wait. A: skills.
+ * Tab: switch direct control. C: companion behavior. K: skill journal/loadout.
+ * I: potions. Esc: field menu, help, save, load and retreat.
+ * Automatic saves use a separate firstJourney_ prefix. No engine scripts edited.
+ */
+(() => {
+    "use strict";
+    const R = FirstJourneyRules;
+    const state = () => $gameSystem._firstJourney;
+    const existingSetup = DataManager.setupNewGame;
+    DataManager.setupNewGame = function() {
+        existingSetup.call(this);
+        $gameSystem._firstJourney = R.create();
+        $gamePlayer.setImage("Actor1", 0);
+        $gamePlayer.followers().hide();
+    };
+    // Use a dedicated save namespace; existing Project1 saves are untouched.
+    DataManager.makeSavename = function(id) { return "firstJourney_file" + id; };
+    DataManager.loadGlobalInfo = function() {
+        return StorageManager.loadObject("firstJourney_global").then(info => { this._globalInfo = info; this.removeInvalidGlobalInfo(); }).catch(() => { this._globalInfo = []; });
+    };
+    DataManager.saveGlobalInfo = function() { return StorageManager.saveObject("firstJourney_global", this._globalInfo); };
+    const oldSaveInfo = DataManager.makeSavefileInfo;
+    DataManager.makeSavefileInfo = function() {
+        const info = oldSaveInfo.call(this);
+        if (state()) info.title = "First Journey • " + R.maps[state().mapId].name;
+        return info;
+    };
+    let saveChain = Promise.resolve();
+    let saveStatus = "";
+    function save(reason, slot = 0) {
+        $gameSystem.onBeforeSave();
+        const snapshot = JsonEx.parse(JsonEx.stringify(DataManager.makeSaveContents()));
+        const info = DataManager.makeSavefileInfo();
+        saveStatus = "Saving…";
+        saveChain = saveChain.then(async () => {
+            await StorageManager.saveObject(DataManager.makeSavename(slot), snapshot);
+            // Keep separate rolling checkpoints in addition to the latest autosave.
+            if (["combat-start", "combat-end", "area-entry"].includes(reason)) await StorageManager.saveObject("firstJourney_" + reason, snapshot);
+            DataManager._globalInfo[slot] = info;
+            await DataManager.saveGlobalInfo();
+            saveStatus = "Saved • " + reason;
+        }).catch(error => { console.error(error); saveStatus = "Save failed — use field menu to retry"; });
+        return saveChain;
+    }
+    R.onCheckpoint = (_, reason) => save(reason);
+    Input.keyMapper[65] = "journeySkills";
+    Input.keyMapper[67] = "journeyBehavior";
+    Input.keyMapper[75] = "journeyJournal";
+    Input.keyMapper[73] = "journeyItems";
+    Input.keyMapper[9] = "journeyControl";
+    Input.keyMapper[32] = "journeyWait";
+    const oldCanMove = Game_Player.prototype.canMove;
+    Game_Player.prototype.canMove = function() { return state() ? false : oldCanMove.call(this); };
+    const oldEncounter = Game_Player.prototype.executeEncounter;
+    Game_Player.prototype.executeEncounter = function() { return state() ? false : oldEncounter.call(this); };
+    const oldMenuEnabled = Scene_Map.prototype.isMenuEnabled;
+    Scene_Map.prototype.isMenuEnabled = function() { return state() ? false : oldMenuEnabled.call(this); };
+    const oldAuto = Scene_Map.prototype.shouldAutosave;
+    Scene_Map.prototype.shouldAutosave = function() { return state() ? false : oldAuto.call(this); };
+    class JourneyChoices extends Window_Command {
+        initialize(rect, entries) { this._entries = entries; super.initialize(rect); }
+        itemTextAlign() { return "left"; }
+        itemHeight() { return 36; }
+        resetFontSettings() { super.resetFontSettings(); this.contents.fontSize = 20; }
+        makeCommandList() { for (let i = 0; i < this._entries.length; i++) this.addCommand(this._entries[i].label, String(i), this._entries[i].enabled !== false); }
+        processOk() {
+            if (!this.isCurrentItemEnabled()) { this.playBuzzerSound(); return; }
+            this.playOkSound(); this.updateInputData(); this.deactivate();
+            this._entries[this.index()].run();
+        }
+    }
+    function syncUnit(character, unit) {
+        if (!character) return;
+        const dx = unit.x - character.x, dy = unit.y - character.y;
+        if (Math.abs(dx) + Math.abs(dy) === 1) {
+            character.setDirection(dx ? (dx > 0 ? 6 : 4) : (dy > 0 ? 2 : 8));
+            character._x = unit.x; character._y = unit.y;
+        } else if (dx || dy) character.locate(unit.x, unit.y);
+        if (unit.direction) character.setDirection(unit.direction);
+        character.setTransparent(unit.hp <= 0);
+        character.setMoveSpeed(5);
+    }
+    const oldStart = Scene_Map.prototype.start;
+    Scene_Map.prototype.start = function() {
+        oldStart.call(this);
+        if (!state()) return;
+        this._mapNameWindow.hide();
+        this._journeyHud = new Sprite(new Bitmap(Graphics.width, Graphics.height));
+        this.addChildAt(this._journeyHud, this.getChildIndex(this._windowLayer));
+        this.syncJourney();
+        if (!state().introduced) {
+            state().introduced = true;
+            R.log(state(), "Aren and Mira set out from Briar Glen. Visit the guild steward at the crossroads.");
+            this.say([
+                "Aren: Father taught me the sword. Mother taught me magic.\nNow it is time to discover what I can make of both.",
+                "Mira: And I am coming with you. Our first guild test is\nonly a goblin nest in the old shrine. We can handle that.",
+                "Tap to turn or step forward; hold to walk. Moving advances time.\nA: skills  •  Tab: control Aren/Mira  •  Space: wait\nEnter: interact with what you face  •  Esc: menu"
+            ]);
+            save("journey-start");
+        }
+    };
+    Scene_Map.prototype.say = function(lines) { for (const text of lines) { $gameMessage.add(text); } };
+    Scene_Map.prototype.syncJourney = function() {
+        const s = state();
+        if ($gameMap.mapId() !== s.mapId) {
+            if (!$gamePlayer.isTransferring()) $gamePlayer.reserveTransfer(s.mapId, s.aren.x, s.aren.y, 2, 0);
+            return;
+        }
+        syncUnit($gamePlayer, s.aren);
+        syncUnit($gameMap.event(1), s.mira);
+        R.area(s).enemies.forEach((unit, index) => syncUnit($gameMap.event(10 + index), unit));
+        const active = s[s.controlled];
+        $gamePlayer.center(active.x, active.y);
+    };
+    Scene_Map.prototype.closeJourneyChoices = function() {
+        if (this._journeyChoices) {
+            this._windowLayer.removeChild(this._journeyChoices);
+            this._journeyChoices.destroy();
+            this._journeyChoices = null;
+        }
+    };
+    Scene_Map.prototype.choices = function(entries, cancel) {
+        this.closeJourneyChoices();
+        const height = Math.min(460, entries.length * 36 + 24);
+        const win = new JourneyChoices(new Rectangle(36, Math.round((Graphics.boxHeight - height) / 2), Graphics.boxWidth - 72, height), entries);
+        win.setHandler("cancel", () => { this.closeJourneyChoices(); if (cancel) cancel(); });
+        this._journeyChoices = win;
+        this.addWindow(win);
+        win.activate(); win.select(0);
+    };
+    Scene_Map.prototype.act = function(callback) {
+        this.closeJourneyChoices();
+        if (callback() === false) R.log(state(), "Cannot do that: check resources, range and line of sight.");
+        this.syncJourney();
+    };
+    Scene_Map.prototype.skillMenu = function() {
+        const s = state(), unit = s[s.controlled];
+        const ids = R.availableSkills(s, unit);
+        this.choices(ids.map(id => {
+            const skill = R.skills[id];
+            return { label: skill.name + "   " + skill.cost + " " + skill.pool.toUpperCase() + "   " + (skill.shape === "front" ? "Front tile" : skill.shape === "line" ? skill.range + " tiles forward" : skill.shape === "arc" ? "3 across in front" : skill.shape === "around" ? "8 surrounding tiles" : skill.shape === "burst" ? "Range 4 / radius 1" : "Range " + skill.range), enabled: unit[skill.pool] >= skill.cost,
+                run: () => this.beginJourneyTargeting(id) };
+        }));
+    };
+    Scene_Map.prototype.journal = function() {
+        const s = state();
+        const entries = [{ label: (s.godMode ? "GOD MODE: all skills available | " : "") + "Copied slots: " + s.equipped.length + "/" + R.slots(s) + (s.combat ? " — locked during combat" : " — select a learned skill to equip"), enabled: false }];
+        for (const id of Object.keys(R.skills).filter(key => !R.skills[key].basic)) {
+            const skill = R.skills[id], k = s.knowledge[id];
+            const text = R.progressText(s, id);
+            entries.push({ label: (s.equipped.includes(id) ? "[E] " : "      ") + skill.name + "  |  " + text, enabled: !s.combat && !!k?.learned, run: () => { if (!R.equip(s, id)) R.log(s, "No free skill slots. Unequip another skill first."); this.journal(); } });
+            if (skill.prerequisite && !R.ready(s, id)) entries.push({ label: "       Requires " + R.skills[skill.prerequisite].name + " at 100% mastery; locked observations +5 units", enabled: false });
+        }
+        this.choices(entries);
+    };
+    Scene_Map.prototype.behavior = function() {
+        const s = state();
+        const modes = { Support: "heal, then attack if MP permits", Attack: "prioritize Light Lance", Guard: "hold position; heal and reduce damage", Follow: "follow without spending resources", Conserve: "heal when needed; no offensive spells" };
+        this.choices(Object.entries(modes).map(([mode, description]) => ({ label: (s.mode === mode ? "[x] " : "[ ] ") + mode + " — " + description, run: () => { s.mode = mode; this.closeJourneyChoices(); R.log(s, "Mira behavior: " + mode + ". Tab returns to direct control."); } })));
+    };
+    Scene_Map.prototype.items = function() {
+        const s = state();
+        this.choices(["hp", "sp", "mp"].map(type => ({ label: type.toUpperCase() + " potion ×" + s.inventory[type] + "  (restores " + (type === "hp" ? 25 : 12) + ")", enabled: s.inventory[type] > 0,
+            run: () => this.choices(R.party(s).map(unit => ({ label: unit.name + " " + unit[type] + "/" + R.maxStats(unit)[type], enabled: unit.hp > 0 && unit[type] < R.maxStats(unit)[type], run: () => this.act(() => R.potion(s, type, unit)) })), () => this.items()) })));
+    };
+    Scene_Map.prototype.shop = function() {
+        const s = state();
+        s.shopStock = s.shopStock || { hp: 2, sp: 1, mp: 1 };
+        this.choices([{ label: "Provisioner • " + s.gold + " gold • potions have limited stock", enabled: false }, ...[["ration", 6], ["hp", 18], ["sp", 22], ["mp", 24]].map(([id, price]) => ({ label: (id === "ration" ? "Ration" : id.toUpperCase() + " potion") + "   " + price + " gold   (owned " + s.inventory[id] + ")" + (id === "ration" ? "" : "   stock " + s.shopStock[id]), enabled: s.gold >= price && (id === "ration" || s.shopStock[id] > 0), run: () => { s.gold -= price; s.inventory[id]++; if (id !== "ration") s.shopStock[id]--; this.shop(); } }))]);
+    };
+    Scene_Map.prototype.fieldMenu = function() {
+        this.choices([
+            { label: "Party", run: () => this.partyMenu() },
+            { label: "Options", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Options); } },
+            { label: "Skills / attack [A]", run: () => this.skillMenu() },
+            { label: "Skill journal and loadout [K]", run: () => this.journal() },
+            { label: "Potions [I]", run: () => this.items() },
+            { label: "Mira's automatic behavior [C]", run: () => this.behavior() },
+            { label: "Switch direct control [Tab]", run: () => { this.closeJourneyChoices(); this.switchControl(); } },
+            { label: "Save expedition (manual slot 1)", run: () => { this.closeJourneyChoices(); save("manual", 1); } },
+            { label: "Load saved expedition", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Load); } },
+            { label: "Controls and rules", run: () => { this.closeJourneyChoices(); this.say([
+                "Tap to turn or step forward; hold to walk. Space: wait. A: skills.\nChoose a skill, aim its hitbox, then confirm. Empty casts work.\nTab: control • C: behavior • K: journal • I: potions",
+                "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Sword Cut costs SP; Ember costs MP.",
+                "Witness a basic skill 3 times to copy its form at 60% power.\nPractice raises it at 6/12/18 points to 80/100/120%.\nDebug units: watching +25; using +100.",
+                "Advanced skills need their prerequisite at 100% mastery.\nUntil then each observation adds 5/300 learning units.\nLoadouts change outside combat; starting attacks use no slots.",
+                "Enemy actions happen after yours and your companion's.\nDowned allies need rest or Revive. If both fall, you return\nto town with progression retained. Use map exits to retreat."
+            ]); } }
+        ]);
+    };
+    Scene_Map.prototype.switchControl = function() {
+        const s = state(), next = s.controlled === "aren" ? "mira" : "aren";
+        if (s[next].hp <= 0) { R.log(s, s[next].name + " is down and cannot act."); return; }
+        s.controlled = next;
+        R.log(s, "Direct control: " + s[next].name + ". The other companion acts automatically.");
+        this.syncJourney();
+    };
+    Scene_Map.prototype.interactJourney = function() {
+        const s = state(), result = R.interact(s);
+        if (result === "shop") this.shop();
+        if (result === "guild") {
+            if (s.quest === "return") {
+                s.quest = "complete"; s.gold += 40;
+                this.say(["Steward: The shrine road is safe again. A fine first test!\nHere is your reward: 40 gold. You are adventurers now.", "Mira: You copied their movements, but made them your own.\nAren: There is still so much I do not understand.\nOur journey has only just begun. — Prototype complete —"]);
+                save("act-complete");
+            } else if (s.quest === "complete") this.say(["Steward: Well done, you two. Rest and prepare for the road.\nYou can continue exploring and practicing your skills."]);
+            else this.say(["Steward: Goblins have nested in the abandoned shrine.\nClear their lookout posts and drive out their leader.\nTake the eastern road. This is your first adventurers' test.", "Mira: I know Mend and Light Lance. Watch carefully!\nWe have three rations; camp only at marked rest points.\nTown lodging is free, and the provisioner sells supplies."]);
+        }
+        this.syncJourney();
+    };
+    Scene_Map.prototype.drawJourney = function() {
+        const b = this._journeyHud.bitmap, s = state();
+        const key = JSON.stringify([s.turn, s.mapId, s.controlled, s.mode, s.quest, s.gold, s.inventory, s.log, s.aren.hp, s.mira.hp, s.aren.sp, s.aren.mp, s.mira.sp, s.mira.mp, $gameMap.displayX(), $gameMap.displayY(), saveStatus]);
+        if (this._journeyHudKey === key) return;
+        this._journeyHudKey = key;
+        b.clear(); b.fontFace = $gameSystem.mainFontFace(); b.fontSize = 17;
+        b.fillRect(0, 0, Graphics.width, 112, "rgba(12,20,32,0.94)");
+        b.fillRect(0, Graphics.height - 108, Graphics.width, 108, "rgba(12,20,32,0.94)");
+        const text = (value, x, y, width = 760, color = "#edf1ea") => { b.textColor = color; b.drawText(value, x, y, width, 24); };
+        text(R.maps[s.mapId].name, 18, 5, 550, "#f0d79b");
+        text((s.combat ? "COMBAT" : "EXPLORING") + " • Turn " + s.turn, Graphics.width - 220, 5, 205, s.combat ? "#ffa38c" : "#9ad8b2");
+        R.party(s).forEach((unit, index) => {
+            const max = R.maxStats(unit), x = 18 + index * 390;
+            text((s.controlled === unit.id ? "▶ " : "  ") + unit.name + "  Lv." + unit.level + (unit.hp <= 0 ? "  DOWN" : ""), x, 32, 370);
+            text("HP " + unit.hp + "/" + max.hp + "   SP " + unit.sp + "/" + max.sp + "   MP " + unit.mp + "/" + max.mp, x, 55, 375);
+        });
+        b.fontSize = 14;
+        text("Rations " + s.inventory.ration + "   Gold " + s.gold + "   Mira: " + s.mode + "   |   " + (s.quest === "return" ? "Return to the guild" : s.quest === "complete" ? "First test complete" : "Clear the shrine's goblin nest"), 18, 83);
+        // Location labels remain attached to their map coordinates while scrolling.
+        const map = R.maps[s.mapId];
+        const markers = [...(map.debugStatue ? [{ p: map.debugStatue, label: "GOD MODE " + (s.godMode ? "ON" : "OFF"), color: "#c6a5ff" }] : []), { p: map.rest, label: s.mapId === 1 ? "FREE REST" : "CAMP • 1 RATION", color: "#ffe2a4" }, ...[map.exit, map.back].filter(Boolean).map(p => ({ p, label: "PASSAGE", color: "#a6e4ef" })), ...(map.npcs || []).map(npc => ({ p: [npc.x, npc.y], label: npc.name, color: "#fff1c9" })), ...(map.caches || []).filter((_, i) => !R.area(s).caches.includes(i)).map(p => ({ p, label: "SUPPLIES", color: "#b5dfab" }))];
+        for (const marker of markers) {
+            const x = $gameMap.adjustX(marker.p[0]) * 48 + 24, y = $gameMap.adjustY(marker.p[1]) * 48;
+            if (y > 145 && y < Graphics.height - 120) { b.textColor = marker.color; b.drawText(marker.label, x - 90, y - 26, 180, 22, "center"); }
+        }
+        for (const enemy of R.enemies(s)) {
+            const x = $gameMap.adjustX(enemy.x) * 48 + 6, y = $gameMap.adjustY(enemy.y) * 48;
+            if (y > 118 && y < Graphics.height - 120) { b.fillRect(x, y, 36, 4, "#31252b"); b.fillRect(x, y, Math.ceil(36 * enemy.hp / enemy.maxHp), 4, "#df8b70"); }
+        }
+        const bottom = Graphics.height - 105;
+        s.log.slice(-3).forEach((line, index) => text(line, 18, bottom + index * 23, Graphics.width - 36));
+        b.fontSize = 13;
+        text("Tap: turn/step / Hold: walk   A skills   Tab control   Enter talk   Space wait   Esc menu", 18, Graphics.height - 30, 680, "#a9c1cf");
+        text(saveStatus, Graphics.width - 215, 83, 205, "#a9c1cf");
+    };
+    const oldUpdate = Scene_Map.prototype.update;
+    Scene_Map.prototype.update = function() {
+        const hadChoices = !!this._journeyChoices;
+        oldUpdate.call(this);
+        if (!state() || !this._journeyHud) return;
+        this.drawJourney();
+        if (this.updateJourneyPresentation && this.updateJourneyPresentation()) return;
+        if (hadChoices || this._journeyChoices || $gameMessage.isBusy() || $gamePlayer.isTransferring() || !this.isActive() || SceneManager.isSceneChanging()) return;
+        if ($gamePlayer.isMoving() || $gameMap.events().some(event => event.isMoving())) return;
+        if (Input.isTriggered("journeySkills")) this.skillMenu();
+        else if (Input.isTriggered("journeyBehavior")) this.behavior();
+        else if (Input.isTriggered("journeyJournal")) this.journal();
+        else if (Input.isTriggered("journeyItems")) this.items();
+        else if (Input.isTriggered("journeyControl")) this.switchControl();
+        else if (Input.isTriggered("cancel") || TouchInput.isCancelled()) this.fieldMenu();
+        else if (Input.isTriggered("ok")) this.interactJourney();
+        else if (Input.isTriggered("journeyWait")) this.act(() => R.finishTurn(state()));
+        else {
+            this.updateJourneyWalking();
+        }
+    };
+})();

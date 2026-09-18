@@ -1,0 +1,57 @@
+// Generate editor-readable MZ maps from the prototype's shared map definitions.
+// Original data is preserved in Addons/FirstJourneyBackup before the first build.
+const fs = require("node:fs");
+const path = require("node:path");
+const root = path.resolve(__dirname, "../Project1");
+const R = require(path.join(root, "js/plugins/FirstJourneyRules.js"));
+const read = name => JSON.parse(fs.readFileSync(path.join(root, "data", name), "utf8"));
+const write = (name, data) => fs.writeFileSync(path.join(root, "data", name), JSON.stringify(data, null, 2) + "\n");
+function event(id, name, x, y, characterName, characterIndex, tileId = 0) {
+    return { id, name, note: "", x, y, pages: [{ conditions: { actorId: 1, actorValid: false, itemId: 1, itemValid: false, selfSwitchCh: "A", selfSwitchValid: false, switch1Id: 1, switch1Valid: false, switch2Id: 1, switch2Valid: false, variableId: 1, variableValid: false, variableValue: 0 }, directionFix: false,
+        image: { tileId, characterName, characterIndex, direction: 2, pattern: 1 }, list: [{ code: 0, indent: 0, parameters: [] }], moveFrequency: 3, moveRoute: { list: [{ code: 0, parameters: [] }], repeat: true, skippable: false, wait: false }, moveSpeed: 4, moveType: 0, priorityType: 1, stepAnime: false, through: false, trigger: 0, walkAnime: true }] };
+}
+const infos = [null];
+for (const [key, definition] of Object.entries(R.maps)) {
+    const id = Number(key), width = definition.grid[0].length, height = definition.grid.length;
+    const data = Array(width * height * 6).fill(0);
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+        const wall = definition.grid[y][x] === "#";
+        // Non-autotile A5 tiles avoid broken autotile seams in generated maps.
+        data[y * width + x] = id === 1 ? (wall ? 1563 : y === 6 || x === 8 ? 1561 : 1552) : (wall ? 1559 : 1556);
+        if (wall) data[width * height * 5 + y * width + x] = 1;
+    }
+    const events = Array(10 + definition.enemies.length).fill(null);
+    events[1] = event(1, "Mira • Priestess", 7, 7, "Actor1", 7);
+    events[1].pages[0].through = true;
+    events[2] = event(2, id === 1 ? "Statue of the Goddess" : "Campfire", ...definition.rest, id === 1 ? "!Other2" : "!Flame", id === 1 ? 4 : 2);
+    events[2].pages[0].directionFix = true;
+    events[2].pages[0].stepAnime = id !== 1;
+    (definition.npcs || []).forEach((npc, index) => { events[3 + index] = event(3 + index, npc.name, npc.x, npc.y, "People1", index); });
+    (definition.caches || []).forEach((point, index) => { events[5 + index] = event(5 + index, "Abandoned supplies", ...point, "!Chest", 0); });
+    [definition.exit, definition.back].filter(Boolean).forEach((link, index) => {
+        const doorway = event(7 + index, "Walk-through shrine passage", link[0], link[1], "!$Gate1", 0);
+        Object.assign(doorway.pages[0], { through: true, directionFix: true, walkAnime: false });
+        doorway.pages[0].image.direction = 6;
+        events[7 + index] = doorway;
+    });
+    if (definition.debugStatue) {
+        events[9] = event(9, "Temporary Goddess statue: toggle god mode", ...definition.debugStatue, "!Other2", 4);
+        events[9].pages[0].directionFix = true;
+    }
+    definition.enemies.forEach((enemy, index) => { events[10 + index] = event(10 + index, enemy.name, enemy.x, enemy.y, "Monster", 1); });
+    const map = { autoplayBgm: false, autoplayBgs: false, battleback1Name: "", battleback2Name: "", bgm: { name: "", pan: 0, pitch: 100, volume: 70 }, bgs: { name: "", pan: 0, pitch: 100, volume: 70 }, disableDashing: true, displayName: definition.name, encounterList: [], encounterStep: 30, height, width, note: "<FirstJourney> Movement and encounters are managed by FirstJourneyRules. Edit shared grids and rebuild to change collision.", parallaxLoopX: false, parallaxLoopY: false, parallaxName: "", parallaxShow: true, parallaxSx: 0, parallaxSy: 0, scrollType: 0, specifyBattleback: false, tilesetId: id === 1 ? 2 : 4, data, events };
+    write("Map" + String(id).padStart(3, "0") + ".json", map);
+    infos.push({ id, expanded: true, name: definition.name, order: id, parentId: 0, scrollX: 0, scrollY: 0 });
+}
+write("MapInfos.json", infos);
+const actors = read("Actors.json");
+actors[1].name = "Aren"; actors[1].profile = "A swordmaster's son and a master mage's pupil. He copies the form of others' skills, then learns to make them his own.";
+actors[2].name = "Mira"; actors[2].characterIndex = 7; actors[2].faceIndex = 7; actors[2].profile = "Aren's childhood friend. A novice priestess setting out on her coming-of-age journey.";
+write("Actors.json", actors);
+const system = read("System.json");
+system.gameTitle = "First Journey: The Abandoned Shrine";
+system.partyMembers = [1, 2]; system.startMapId = 1; system.startX = 8; system.startY = 7;
+system.optFollowers = false; system.optTransparent = false; system.optDrawTitle = true;
+write("System.json", system);
+fs.writeFileSync(path.join(root, "js/plugins.js"), '// Generated by RPG Maker.\n// Do not edit this file directly.\nvar $plugins =\n[\n{"name":"FirstJourneyRules","status":true,"description":"Overworld rules and content","parameters":{}},\n{"name":"FirstJourney","status":true,"description":"Map combat and prototype UI","parameters":{}},\n{"name":"FirstJourneyPresentation","status":true,"description":"Map targeting, portraits and movement","parameters":{}}\n];\n');
+console.log("Built Briar Glen and two shrine floors; enabled First Journey plugins.");
