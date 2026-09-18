@@ -42,3 +42,5 @@ The combat timeline crops the existing ArenPortrait-v4 and MiraPortrait images
 for party faces and uses face index 1 of the existing `src/img/faces/Monster.png`
 for goblins. Rendering crops only; source images are unchanged. The Monster
 face retains its original RPG Maker asset license.
+
+The current v2 large-head walking sprites, reference inputs, and full prompts are documented in [Overworld-sprites-v2.md](Overworld-sprites-v2.md). Earlier sheets are retained.

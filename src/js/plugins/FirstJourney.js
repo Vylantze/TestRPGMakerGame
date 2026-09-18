@@ -17,7 +17,7 @@
     DataManager.setupNewGame = function() {
         existingSetup.call(this);
         $gameSystem._firstJourney = R.create();
-        $gamePlayer.setImage("$ArenJourney-v1", 0);
+        $gamePlayer.setImage("$ArenJourney-v2", 0);
         $gamePlayer.followers().hide();
     };
     // Use a dedicated save namespace; existing Project1 saves are untouched.
@@ -150,7 +150,7 @@
         if (this._journeyPendingAction) {
             const arenAction = this._journeyPendingAction; this._journeyPendingAction = null;
             R.submit(s, arenAction, action, true);
-        } else if (s.direct && s.mira.hp > 0) {
+        } else if (s.combat && s.direct && s.mira.hp > 0) {
             this._journeyPendingAction = action; this.miraCommandMenu();
         } else R.submit(s, action, null, true);
         this.syncJourney(); return true;
@@ -205,7 +205,7 @@
             { label: "Skill journal [K]", run: () => this.journal() },
             { label: "Potions [I]", run: () => this.items() },
             { label: "Mira behavior [C]", run: () => this.behavior() },
-            { label: "Mira: " + (state().direct ? "Direct" : "Auto") + " [Tab]", run: () => { this.closeJourneyChoices(); this.toggleMiraCommands(); } },
+            { label: "Mira combat: " + (state().direct ? "Direct" : "Auto") + " [Tab]", run: () => { this.closeJourneyChoices(); this.toggleMiraCommands(); } },
             { label: "Save", run: () => { this.closeJourneyChoices(); save("manual", 1); } },
             { label: "Load", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Load); } },
             { label: "Controls and rules", run: () => { this.closeJourneyChoices(); this.say([
@@ -219,7 +219,7 @@
     };
     Scene_Map.prototype.toggleMiraCommands = function() {
         state().direct = !state().direct;
-        R.log(state(), "Mira: " + (state().direct ? "direct commands after Aren's action." : "automatic " + state().mode + "."));
+        R.log(state(), "Mira: " + (state().direct ? "direct commands in combat after Aren's action." : "automatic " + state().mode + "."));
     };
     Scene_Map.prototype.interactJourney = function() {
         const s = state(), result = R.interact(s);
@@ -258,7 +258,7 @@
             b.fillRect(Graphics.width - 320, 12, 308, 108, "rgba(12,20,32,0.9)");
             b.fontSize = 15;
             text(R.maps[s.mapId].name, Graphics.width - 310, 15, 290, "#f0d79b");
-            text((s.round ? "RESOLVING" : s.combat ? "COMBAT" : "EXPLORING") + " • Round " + s.turn + " • Mira " + (s.direct ? "Direct" : "Auto"), Graphics.width - 310, 40, 290);
+            text((s.round ? "RESOLVING" : s.combat ? "COMBAT" : "EXPLORING") + " • Round " + s.turn + " • Mira " + (s.combat && s.direct ? "Direct" : "Auto"), Graphics.width - 310, 40, 290);
             b.fontSize = 13;
             text("Rations " + s.inventory.ration + "   Gold " + s.gold + "   " + saveStatus, Graphics.width - 310, 65, 290, "#a9c1cf");
             text(s.quest === "return" ? "Return to the guild" : s.quest === "complete" ? "First test complete" : "Clear the goblin nest", Graphics.width - 310, 88, 290, "#f0d79b");

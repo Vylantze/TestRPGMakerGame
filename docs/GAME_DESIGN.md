@@ -205,9 +205,12 @@ combat rewards. Any future reputation or other penalty is not implemented.
 
 ## Sequential turns, Speed, and companion commands
 
+Outside combat, only Aren receives player commands; Mira acts automatically.
+Tab retains the direct-command preference for future combat encounters.
+
 Aren always leads exploration. Mira acts automatically by default. **Tab** now
 toggles direct commands for Mira; it no longer swaps the movement leader.
-In direct mode the player chooses Aren's action, then Mira's skill, guard,
+In combat with direct mode enabled the player chooses Aren's action, then Mira's skill, guard,
 follow, or wait action. Both choices are collected before execution. Canceling
 the companion command menu abandons the round without advancing time or spending
 resources. If Mira is down, her command step is skipped.
@@ -273,7 +276,7 @@ waist. Mira has blonde hair, purple eyes, white/green priestess clothes, gold
 trim, and relaxed overlapping hands in her portrait. Her requested visual
 reference was Elise Katharina von Hohenheim from *Hachi-nan tte, Sore wa Nai
 deshou!*. The current overworld walking sprites were generated to match these
-project portraits. Source images and prompts are recorded in the art manifest.
+project portraits, using large heads and compact bodies to match map NPCs. Source images and prompts are recorded in the art manifest.
 
 ## Saves, defeat, and testing aids
 

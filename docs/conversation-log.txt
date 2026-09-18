@@ -9,8 +9,8 @@ written after a commit appear in the next refresh. Multiple task transcripts
 are retained as separate sections. This is a text export, not a raw session dump.
 
 ===== BEGIN THREAD 01a0b597-7a47-7340-b118-63b0e689a2b7 =====
-Export refreshed UTC: 2026-09-18T23:18:12.020Z
-Last included message UTC: 2026-09-18T23:17:55.564Z
+Export refreshed UTC: 2026-09-18T23:28:29.956Z
+Last included message UTC: 2026-09-18T23:28:13.707Z
 
 [2026-09-18T17:39:44.551Z] USER
 Make an RPG using RPG Maker MZ involving a protagonist character with a unique ability to learn all skills and abilities (including spells and attacks) in the game. Ask me questions to figure out what to do.
@@ -914,5 +914,45 @@ The timeline now shows faces, names, and Speed values, and marks the current act
 
 [2026-09-18T23:17:55.564Z] ASSISTANT
 All four changes are complete. The 39 rules checks, full expedition test, and MZ playtest pass. I also verified that an opening attack from either Aren or Mira enters combat before Speed determines execution order. I’m updating the conversation log and committing locally.
+
+----------------------------------------
+
+[2026-09-18T23:18:24.517Z] ASSISTANT
+Implemented:
+
+- Direction inputs rotate Aren and his skill hitbox during targeting.
+- Speed ordering and sequential execution apply only in combat.
+- A face-based timeline shows combat turn order.
+- Combat opens **Move, Skill, Guard, View Turn Order** by default. Selecting an actor in the timeline highlights their location without spending an action.
+
+Verified with 39 rules checks, the full expedition, and MZ playtesting. Documentation and conversation log updated.
+
+Committed as `13a73dc`. Not pushed.
+
+----------------------------------------
+
+[2026-09-18T23:20:45.406Z] USER
+1. Direct control only grants control over party members in combat. Out of combat, Aren is still the only character controlled.&#x20;
+2. Create new overworld sprites for Aren and Mira based on their portrait art that is following the design style of the other sprites. More specifically, the sprites should have a big head and relatively smaller body.
+
+----------------------------------------
+
+[2026-09-18T23:20:52.473Z] ASSISTANT
+I’ll restrict direct party commands to combat, then remake Aren and Mira’s walking sprites with larger heads and smaller bodies to better match the existing sprites. I’ll use the imagegen skill for the new art.
+
+----------------------------------------
+
+[2026-09-18T23:25:11.111Z] ASSISTANT
+The new sprites now use the larger heads and compact bodies you requested. I’m integrating the walking frames and checking that Mira’s command menu appears only during combat, even when direct mode is enabled in town.
+
+----------------------------------------
+
+[2026-09-18T23:27:20.611Z] ASSISTANT
+Both sprite sheets are packed and connected to the game. Direct mode now stays as a combat preference; exploration actions execute immediately with Aren. The playtest is checking that town behavior, combat commands, cancellation, and the return to exploration all work correctly.
+
+----------------------------------------
+
+[2026-09-18T23:28:13.707Z] ASSISTANT
+The MZ playtest passed with no console errors, including direct commands in combat and Aren-only control afterward. I’ve also checked the new sprites in town and updated the documentation and art provenance. I’m committing the changes locally.
 
 ===== END THREAD 01a0b597-7a47-7340-b118-63b0e689a2b7 =====

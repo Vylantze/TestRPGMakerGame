@@ -51,9 +51,12 @@ floating damage/healing numbers for both party and enemy actions.
 Walls and interactable objects block movement, but never block turning. Mira
 steps into Aren's previous tile when he walks; her move uses her action for that
 turn. She acts according to her behavior setting when Aren attacks or waits.
+Outside combat, only Aren receives player commands; Mira acts automatically.
+Tab retains the direct-command preference for future combat encounters.
+
 Guard still holds position during combat. Companions are passable: walking into
 one swaps them into the tile you vacated. Turn to face Mira and press Enter
-for contextual conversation. Aren always leads movement. In direct mode,
+for contextual conversation. Aren always leads movement. In combat with direct mode enabled,
 choose Aren's action first, then Mira's skill, guard, follow or wait action.
 Neither action executes until both are chosen. Canceling Mira's command menu
 cancels the whole round without spending resources or advancing time.
@@ -89,7 +92,7 @@ Mira's **Support** mode heals allies below 65% HP, then attacks while retaining
 some MP. **Attack** prioritizes Light Lance. **Guard** holds position, heals
 when possible, and reduces the next incoming hit. **Follow** spends no
 resources. **Conserve** follows and heals but does not cast offensive magic.
-In direct mode, Aren remains the leader and Mira receives a command after each
+In combat with direct mode enabled, Aren remains the leader and Mira receives a command after each
 Aren action. If Aren falls, choose Wait to let Mira act; command her to revive
 him when available. If Mira falls, her command step is skipped.
 

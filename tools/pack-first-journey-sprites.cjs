@@ -3,9 +3,11 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const sharp = require("C:/Users/digi9/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/sharp");
+const version = process.argv[2] || "v2";
+if (!/^v[0-9]+$/.test(version)) throw new Error("Expected version such as v2");
 (async () => {
     for (const name of ["Aren", "Mira"]) {
-        const source = path.resolve(__dirname, "../Addons/FirstJourneyArt/" + name + "-walk-source-v1.png");
+        const source = path.resolve(__dirname, "../Addons/FirstJourneyArt/" + name + "-walk-source-" + version + ".png");
         const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
         const occupied = Array.from({ length: info.height }, (_, y) => {
             let count = 0;
@@ -31,7 +33,7 @@ const sharp = require("C:/Users/digi9/.cache/codex-runtimes/codex-primary-runtim
             const width = Math.round(f.width * scale), height = Math.round(f.height * scale);
             composites.push({ input: await sharp(source).extract({ left: f.left, top: f.top, width: f.width, height: f.height }).resize(width, height, { kernel: "nearest" }).png().toBuffer(), left: f.c * 48 + Math.floor((48 - width) / 2), top: f.r * 48 + 46 - height });
         }
-        const output = path.resolve(__dirname, "../src/img/characters/$" + name + "Journey-v1.png");
+        const output = path.resolve(__dirname, "../src/img/characters/$" + name + "Journey-" + version + ".png");
         await sharp({ create: { width: 144, height: 192, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).composite(composites).png().toFile(output);
         console.log(name + ": packed 12 aligned frames into " + output);
     }

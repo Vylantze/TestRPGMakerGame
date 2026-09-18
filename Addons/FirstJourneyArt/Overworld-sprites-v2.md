@@ -1,0 +1,17 @@
+# Overworld sprites v2
+
+Generated with the built-in imagegen tool on 2026-09-19. New artwork based on project portraits; People1.png (RPG Maker MZ RTP, subject to the project's MZ license) provided proportions/style reference. These assets are for this RPG Maker project. No shared assets/ originals were modified. Earlier v1 sheets remain preserved.
+
+References: `src/img/pictures/ArenPortrait-v4.png`, `src/img/pictures/MiraPortrait.png`, `src/img/characters/People1.png`.
+
+Generated sources: `Aren-walk-source-v2.png`, `Mira-walk-source-v2.png` in this directory. Original generation files: `exec-e515e53c-98b4-4bc3-befa-45d128a8faa4.png` and `exec-fa4aa023-5131-4073-972c-f7eeabc381f4.png` under the local Codex generated_images task directory.
+
+Runtime: `src/img/characters/$ArenJourney-v2.png` and `$MiraJourney-v2.png`. Mechanical processing with `node tools/pack-first-journey-sprites.cjs v2`: crop transparent frame padding, uniformly nearest-neighbor resize, align feet in 48px cells; preserve alpha. Atlas is 144×192, three walking frames by four directions (down, left, right, up). Head occupies approximately 60% of the character height, with a compact body matching the map NPC proportions.
+
+## Aren prompt
+
+Use case: stylized-concept. Create a NEW RPG Maker MZ walking sprite atlas of Aren. Image 1 is character identity/outfit reference ONLY; image 2 is the exact intended pixel-art proportions/style reference. Match the People1 villagers: huge round head about 60% of total figure height, tiny squat body, short stubby limbs, about 1.7 heads tall. Do NOT use realistically proportioned portrait anatomy. Brown tousled hair, blue tunic, red scarf, leather belt, brown boots, sheathed longsword at his anatomical left hip behind his body. Crisp simple pixel art readable at 48x48 pixels with limited shaded colors, no fine painterly detail. EXACTLY 12 complete figures, arranged 3 columns and 4 evenly spaced rows: row1 faces DOWN toward viewer, row2 faces LEFT, row3 faces RIGHT, row4 faces UP away from viewer. Each row columns walking left foot, idle, walking right foot. Consistent large head and short body across all frames. Entire figure fits each cell with empty margins. Transparent RGBA background, no shadow, floor, grid, labels, or extra figures. Portrait format 3:4 atlas.
+
+## Mira prompt
+
+Use case: stylized-concept. Create a NEW RPG Maker MZ walking sprite atlas of Mira. Image 1 is character identity/outfit reference ONLY; image 2 is the intended pixel-art proportions/style reference. Match People1 villagers: huge round head about 60% of total figure height, tiny squat body, short stubby limbs, about 1.7 heads tall. Do NOT use realistically proportioned portrait anatomy. Blonde hair, purple eyes, white priestess veil with sage green/gold trim, white and sage green robes, gold stole, purple bow, gold star pendant, tiny brown shoes. Crisp simple pixel art readable at 48x48 pixels with limited shaded colors, no fine painterly detail. EXACTLY 12 complete figures arranged 3 columns and 4 evenly spaced rows: row1 faces DOWN toward viewer, row2 faces LEFT, row3 faces RIGHT, row4 faces UP away from viewer. Each row columns walking left foot, idle, walking right foot. Consistent large head and short body across all frames. Entire figure fits each cell with empty margins. Transparent RGBA background, no shadow, floor, grid, labels, or extra figures. Portrait format 3:4 atlas.

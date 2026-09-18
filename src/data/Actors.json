@@ -4,7 +4,7 @@
     "id": 1,
     "battlerName": "Actor1_1",
     "characterIndex": 0,
-    "characterName": "$ArenJourney-v1",
+    "characterName": "$ArenJourney-v2",
     "classId": 1,
     "equips": [
       2,
@@ -27,7 +27,7 @@
     "id": 2,
     "battlerName": "Actor1_2",
     "characterIndex": 0,
-    "characterName": "$MiraJourney-v1",
+    "characterName": "$MiraJourney-v2",
     "classId": 1,
     "equips": [
       1,

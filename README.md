@@ -15,10 +15,14 @@ Open **`TestProject/` as the workspace root**. The playable MZ project is in
 3. Speak to the guild steward in Briar Glen, enter the shrine through the eastern
    wall opening, defeat the nest leader, and return to the guild.
 
-Arrow keys turn/walk; **A** opens skills; **Enter** interacts; **Space** waits;
+Arrow keys turn/walk; **A** opens skills; **Enter** interacts; **Space** waits.
+
+Outside combat, only Aren receives player commands; Mira acts automatically.
+Tab retains the direct-command preference for future combat encounters.
+
 **Tab** toggles Mira's automatic/direct commands; **Esc** opens the field menu.
-Direct mode collects Aren's action and then Mira's before resolving the round
-in Speed order during combat. Exploration resolves immediately. Combat opens
+In combat, direct mode collects Aren's action and then Mira's before resolving the round
+in Speed order. Exploration resolves immediately. Combat opens
 Move / Skill / Guard / View Turn Order commands and a face-based initiative
 timeline; selecting a timeline actor highlights their map location. Directional
 skills can be rotated with arrows during targeting. Legacy-save migration is
@@ -34,7 +38,7 @@ not supported.
   text and clarification questions, with credentials redacted.
 - [Agent instructions](AGENTS.md): development, asset, logging, and Git policy.
 - [Art sources](Addons/FirstJourneyArt/ART_SOURCES.md) and
-  [walking-sprite provenance](Addons/FirstJourneyArt/Overworld-sprites-v1.md).
+  [walking-sprite provenance](Addons/FirstJourneyArt/Overworld-sprites-v2.md).
 
 ## Repository layout
 
