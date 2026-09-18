@@ -80,9 +80,11 @@ Outside combat, actions and following resolve immediately without Speed sorting
 or sequential delays. Speed effects do not lose duration while exploring.
 Combat uses the exploration map; there is no battle scene.
 
-The combat menu opens automatically between rounds: **Move**, **Skill**,
-**Guard**, and **View Turn Order**. Move accepts one direction; a blocked step
-or cancellation spends no action. Esc opens the usual field menu.
+Combat starts with **Move**, **Skill**, **Guard**, and **View Turn Order**.
+Move or Cancel enters persistent Move mode: each valid step resolves a round
+and keeps movement active, including after Mira’s direct command. Enter reopens
+combat commands. Esc in Move opens the usual field menu; closing it returns to
+Move. Blocked steps and menu navigation spend no action.
 The top timeline shows actor faces, names and Speed from fastest to slowest;
 the current actor is marked during execution. View Turn Order lets arrows or
 a click select any actor and highlight their location, panning the camera
@@ -96,10 +98,18 @@ In combat with direct mode enabled, Aren remains the leader and Mira receives a 
 Aren action. If Aren falls, choose Wait to let Mira act; command her to revive
 him when available. If Mira falls, her command step is skipped.
 
-Holding a direction into a wall or solid object keeps Aren’s walking animation
-playing without advancing time or spending resources. Releasing the direction
-returns him to idle. Party walking frames are centered with aligned feet and
+Holding a direction into a wall or solid object keeps the living party’s walking animations
+playing, with companions facing the preceding party member, without advancing time or spending resources. Releasing the direction
+returns the party to idle. Party walking frames are centered with aligned feet and
 are at least as wide and tall as the Guild Steward and Provisioner.
+
+Offensive AoE skills spend their normal cost plus at least 1 of the other
+resource: physical areas require 1 MP and magical areas require 1 SP. This
+applies to party and enemy attacks, even empty or wall-clipped casts. Both
+pools must be sufficient; costs are shown together in skill selection.
+Healing and support buffs retain their normal costs. Only combat actions
+increase the cumulative round counter, shown on the combat timeline.
+Exploration neither increases nor displays that counter.
 
 ## Attack areas and entrances
 
@@ -152,7 +162,7 @@ is saved and an interaction creates an autosave.
   the party's HP, SP and MP, including downed members. Rest is unavailable in
   combat. Each supplies cache contains one ration and 6 gold, collectible once.
 - Rations cost 6 gold. HP/SP/MP potions cost 18/22/24 gold and have limited town
-  stock of 2/1/1. Potions restore 25 HP or 12 SP/MP and consume a world turn.
+  stock of 2/1/1. Potions restore 25 HP or 12 SP/MP and consume an action (a counted round only in combat).
   They do not revive a downed member. Waiting and leveling do not heal.
 - Mira starts with Mend and Light Lance; Radiant Burst arrives at level 2,
   Greater Mend at level 3 and
@@ -261,9 +271,9 @@ Playwright import path will need adjusting on another machine. It does not
 change the native MZ playtest's saves. MZ/NW.js deployment should still receive
 a complete manual playthrough before distribution.
 
-Verified on 19 September 2026: 27 rules checks and 12 sequential-turn checks
+Verified on 19 September 2026: 29 rules checks and 12 sequential-turn checks
 pass. The baseline expedition clears both shrine maps and returns to the guild
-in 131 turns, at level 3 with one ration left and no defeats. The browser run
+in 23 combat rounds, at level 3 with one ration left and no defeats. The browser run
 passes new-game startup, movement, one-third-tile camera scrolling, menus, skill
 hover, direct companion commands and cancellation, combat menus, timeline
 inspection, directional aiming, targeting, combat checkpoints,

@@ -23,15 +23,24 @@ Tab retains the direct-command preference for future combat encounters.
 **Tab** toggles Mira's automatic/direct commands; **Esc** opens the field menu.
 In combat, direct mode collects Aren's action and then Mira's before resolving the round
 in Speed order. Exploration resolves immediately. Combat opens
-Move / Skill / Guard / View Turn Order commands and a face-based initiative
-timeline; selecting a timeline actor highlights their map location. Directional
+Move / Skill / Guard / View Turn Order commands. Cancel enters persistent Move;
+Enter reopens combat commands, while Esc in Move opens the field menu. A face-based initiative
+timeline shows execution order; selecting an actor highlights their map location. Directional
 skills can be rotated with arrows during targeting. Legacy-save migration is
 not supported.
 
-Holding a direction into a wall or solid object keeps Aren’s walking animation
-playing without advancing time or spending resources. Releasing the direction
-returns him to idle. Party walking frames are centered with aligned feet and
+Holding a direction into a wall or solid object keeps the living party’s walking animations
+playing, with companions facing the preceding party member, without advancing time or spending resources. Releasing the direction
+returns the party to idle. Party walking frames are centered with aligned feet and
 are at least as wide and tall as the Guild Steward and Provisioner.
+
+Offensive AoE skills spend their normal cost plus at least 1 of the other
+resource: physical areas require 1 MP and magical areas require 1 SP. This
+applies to party and enemy attacks, even empty or wall-clipped casts. Both
+pools must be sufficient; costs are shown together in skill selection.
+Healing and support buffs retain their normal costs. Only combat actions
+increase the cumulative round counter, shown on the combat timeline.
+Exploration neither increases nor displays that counter.
 
 ## Documentation
 

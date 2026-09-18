@@ -211,13 +211,24 @@
         if (skill.shape) return footprint(state, user, id, target).some(tile => tile.x === target.x && tile.y === target.y);
         return !wall(state, target.x, target.y) && distance(user, target) <= skill.range && sight(state, user, target);
     }
+    function skillCosts(id) {
+        const skill = skills[id];
+        if (!skill) return {};
+        const costs = { [skill.pool]: skill.cost };
+        if (isArea(id) && offensive(id)) costs[skill.pool === "sp" ? "mp" : "sp"] = Math.max(1, skill.secondaryCost || 1);
+        return costs;
+    }
+    function canAfford(unit, id) {
+        return !!skills[id] && Object.entries(skillCosts(id)).every(([pool, amount]) => (unit[pool] || 0) >= amount);
+    }
+    function costText(id) { return Object.entries(skillCosts(id)).map(([pool, amount]) => amount + " " + pool.toUpperCase()).join(" + "); }
     function use(state, user, id, target = aim(user, id)) {
         const skill = skills[id];
-        if (!skill || user.hp <= 0 || user[skill.pool] < skill.cost) return false;
+        if (!skill || user.hp <= 0 || !canAfford(user, id)) return false;
         if (skill.kind === "guard" && skill.range === 0 && !skill.shape) target = user;
         if (target.hp !== undefined && !canTarget(state, user, id, target)) return false;
         if ((!skill.shape || skill.shape === "burst") && !canTarget(state, user, id, target)) return false;
-        user[skill.pool] -= skill.cost;
+        for (const [pool, amount] of Object.entries(skillCosts(id))) user[pool] -= amount;
         const factor = user.id === "aren" && !skill.basic ? 0.6 + mastery(state, id) * 0.2 : 1;
         const power = Math.round((skill.power + (user.level - 1) * 2) * factor);
         observe(state, user, id);
@@ -392,7 +403,7 @@
         if (unit.hp <= 0) return action.type === "wait";
         if (action.type === "skill") {
             const skill = skills[action.id];
-            return !!skill && availableSkills(state, unit).includes(action.id) && unit[skill.pool] >= skill.cost && ((skill.shape && skill.shape !== "burst") || canTarget(state, unit, action.id, action.target || aim(unit, action.id)));
+            return !!skill && availableSkills(state, unit).includes(action.id) && canAfford(unit, action.id) && ((skill.shape && skill.shape !== "burst") || canTarget(state, unit, action.id, action.target || aim(unit, action.id)));
         }
         if (action.type === "move") return Math.abs(action.dx) + Math.abs(action.dy) === 1 && !wall(state, unit.x + action.dx, unit.y + action.dy) && !solid(state, unit.x + action.dx, unit.y + action.dy) && !enemies(state).some(e => e.x === unit.x + action.dx && e.y === unit.y + action.dy);
         if (action.type === "potion") {
@@ -416,7 +427,7 @@
             }
         }
         combatCheck(state);
-        state.turn++;
+        if (state.combat) state.turn++;
         const previous = { x: state.aren.x, y: state.aren.y };
         const entries = [{ unitId: "aren", action }, { unitId: "mira", action: miraAction || { type: action.type === "move" ? "follow" : "auto", target: previous } }, ...enemies(state).filter(e => e.active).map(e => ({ unitId: e.id, action: { type: "enemy" } }))].filter(entry => [...party(state), ...area(state).enemies].find(unit => unit.id === entry.unitId)?.hp > 0);
         if (!state.combat) {
@@ -507,7 +518,7 @@
         for (const npc of map.npcs || []) if (npc.x === front.x && npc.y === front.y) return npc.type;
         log(state, "Face a person or object, then press Enter."); return "none";
     }
-    const api = { turnOrder, speed, offensive, validAction, submit, advance, isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
+    const api = { skillCosts, canAfford, costText, turnOrder, speed, offensive, validAction, submit, advance, isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     globalThis.FirstJourneyRules = api;
 })();

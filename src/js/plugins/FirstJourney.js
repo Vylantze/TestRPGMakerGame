@@ -144,7 +144,7 @@
     };
     Scene_Map.prototype.commandUnit = function() { return this._journeyPendingAction ? state().mira : state().aren; };
     Scene_Map.prototype.submitJourneyAction = function(action) {
-        this.closeJourneyChoices(); this._journeyPreview = null; this._journeyCombatMove = false;
+        this.closeJourneyChoices(); this._journeyPreview = null;
         const s = state(), unit = this.commandUnit();
         if (!R.validAction(s, unit, action)) {
             if (action.type === "move" && unit.id === "aren") this.animateJourneyBlockedStep(action.dx, action.dy);
@@ -171,8 +171,8 @@
     };
     Scene_Map.prototype.skillMenu = function() {
         const s = state(), unit = this.commandUnit(), ids = R.availableSkills(s, unit);
-        this.choices(ids.map(id => ({ label: R.skills[id].name + "  " + R.skills[id].cost + " " + R.skills[id].pool.toUpperCase(),
-            skillId: id, enabled: unit.hp > 0 && unit[R.skills[id].pool] >= R.skills[id].cost, run: () => this.beginJourneyTargeting(id)
+        this.choices(ids.map(id => ({ label: R.skills[id].name + "  " + R.costText(id),
+            skillId: id, enabled: unit.hp > 0 && R.canAfford(unit, id), run: () => this.beginJourneyTargeting(id)
         })), () => { this._journeyPreview = null; this._journeyOverlay?.bitmap.clear(); if (this._journeyPendingAction) this.miraCommandMenu(); }, 296);
     };
     Scene_Map.prototype.journal = function() {
@@ -217,7 +217,8 @@
                 "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Sword Cut costs SP; Ember costs MP.",
                 "Witness a basic skill 3 times to copy its form at 60% power.\nPractice raises it at 6/12/18 points to 80/100/120%.\nDebug units: watching +25; using +100.",
                 "Advanced skills need their prerequisite at 100% mastery.\nUntil then each observation adds 5/300 learning units.\nLoadouts change outside combat; starting attacks use no slots.",
-                "Combat actions resolve in descending Speed order.\nDowned allies need rest or Revive. If both fall, you return\nto town with progression retained. Use map exits to retreat."
+                "Combat actions resolve in descending Speed order.\nCancel from combat commands enters persistent Move.\nEnter reopens commands; Esc in Move opens the normal menu.",
+                "AoE attacks also cost 1 of the other resource: SP or MP.\nOnly combat actions count rounds. Downed allies need rest\nor Revive. Defeat returns you to town with progress retained."
             ]); } }
         ], null, 280);
     };
@@ -262,7 +263,7 @@
             b.fillRect(Graphics.width - 320, 12, 308, 108, "rgba(12,20,32,0.9)");
             b.fontSize = 15;
             text(R.maps[s.mapId].name, Graphics.width - 310, 15, 290, "#f0d79b");
-            text((s.round ? "RESOLVING" : s.combat ? "COMBAT" : "EXPLORING") + " • Round " + s.turn + " • Mira " + (s.combat && s.direct ? "Direct" : "Auto"), Graphics.width - 310, 40, 290);
+            text((s.round ? "RESOLVING" : s.combat ? "COMBAT" : "EXPLORING") + (s.combat ? " • Round " + s.turn : "") + " • Mira " + (s.combat && s.direct ? "Direct" : "Auto"), Graphics.width - 310, 40, 290);
             b.fontSize = 13;
             text("Rations " + s.inventory.ration + "   Gold " + s.gold + "   " + saveStatus, Graphics.width - 310, 65, 290, "#a9c1cf");
             text(s.quest === "return" ? "Return to the guild" : s.quest === "complete" ? "First test complete" : "Clear the goblin nest", Graphics.width - 310, 88, 290, "#f0d79b");

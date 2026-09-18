@@ -56,7 +56,7 @@ const server = http.createServer((req, res) => {
         await press("ArrowDown");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), 0);
         await press("ArrowDown");
-        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), 1, "Same-direction tap steps once");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), 0, "Exploration movement does not count combat rounds");
         assert.deepEqual(await page.evaluate(() => [$gameSystem._firstJourney.mira.x, $gameSystem._firstJourney.mira.y]), [8, 7]);
         await press("ArrowUp");
         await press("Enter");
@@ -69,7 +69,9 @@ const server = http.createServer((req, res) => {
                 Object.assign(s.aren, { x: o.x, y: o.y, direction: o.direction });
                 SceneManager._scene.syncJourney();
                 if (FirstJourneyRules.validAction(s, s.aren, { type: "move", dx: o.dx, dy: o.dy })) throw Error("Expected solid obstacle");
-                window.blockedPatterns = [];
+                window.blockedPatterns = []; window.followerPatterns = [];
+                const event = $gameMap.event(1), update = event.updateAnimation;
+                event.updateAnimation = function() { update.call(this); followerPatterns.push(this.pattern()); };
                 const original = $gamePlayer.updateAnimation;
                 $gamePlayer.updateAnimation = function() { original.call(this); blockedPatterns.push(this.pattern()); };
                 return [s.turn, s.aren.hp, s.aren.sp, s.aren.mp];
@@ -80,9 +82,11 @@ const server = http.createServer((req, res) => {
             await page.waitForFunction(f => Graphics.frameCount >= f + 50, frame);
             await page.keyboard.up(obstacle.key);
             assert.ok(await page.evaluate(() => new Set(blockedPatterns).size >= 3), "Blocked walking cycles all walking frames");
+            assert.ok(await page.evaluate(() => new Set(followerPatterns).size >= 3), "Mira also walks in place toward Aren");
+            assert.equal(await page.evaluate(() => { const s = $gameSystem._firstJourney, copy = { ...s.mira }; FirstJourneyRules.faceToward(copy, s.aren); return $gameMap.event(1).direction() === copy.direction; }), true);
             assert.deepEqual(await page.evaluate(() => { const s = $gameSystem._firstJourney; return [s.turn, s.aren.hp, s.aren.sp, s.aren.mp]; }), before, "Blocked walking spends no turn or resources");
             assert.deepEqual(await page.evaluate(() => [$gamePlayer.x, $gamePlayer.y]), [obstacle.x, obstacle.y]);
-            const released = await page.evaluate(() => { delete $gamePlayer.updateAnimation; return Graphics.frameCount; });
+            const released = await page.evaluate(() => { delete $gamePlayer.updateAnimation; delete $gameMap.event(1).updateAnimation; return Graphics.frameCount; });
             await page.waitForFunction(f => Graphics.frameCount >= f + 30, released);
             assert.equal(await page.evaluate(() => $gamePlayer.pattern()), 1, "Releasing blocked movement returns to idle");
         }
@@ -117,13 +121,13 @@ const server = http.createServer((req, res) => {
         await press("Space");
         assert.equal(await page.evaluate(() => !!SceneManager._scene._journeyPendingAction), false, "Exploration never requests Mira commands");
         assert.equal(await page.evaluate(() => SceneManager._scene.commandUnit().id), "aren");
-        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), beforeDirect + 1);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), beforeDirect);
         await press("a");
         assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices.width), 296);
         assert.ok(await page.evaluate(() => !!SceneManager._scene._journeyPreview));
         await page.screenshot({ path: path.join(output, "skill-hover.png") });
         await press("Enter"); await press("Enter");
-        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), beforeDirect + 2, "Exploration skills execute without companion commands");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), beforeDirect, "Exploration skills execute without companion commands");
         assert.equal(await page.evaluate(() => !!SceneManager._scene._journeyPendingAction), false);
         await press("Tab");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.controlled), "aren");
@@ -158,7 +162,7 @@ const server = http.createServer((req, res) => {
         await press("a"); await press("Enter");
         assert.equal(await page.evaluate(() => !!SceneManager._scene._journeyTarget), true, "Empty hitboxes still open a confirmation preview");
         await press("Enter");
-        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), emptyCastTurn + 1);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), emptyCastTurn);
         // Exercise transfer, combat and real engine serialization, rather than mocks.
         await page.evaluate(() => {
             FirstJourneyRules.travel($gameSystem._firstJourney, 2, 2, 9);
@@ -237,9 +241,9 @@ const server = http.createServer((req, res) => {
             SceneManager._scene.syncJourney();
         });
         await page.waitForFunction(() => !$gamePlayer.isMoving());
-        const turnBeforeHold = await page.evaluate(() => $gameSystem._firstJourney.turn);
+        const positionBeforeHold = await page.evaluate(() => $gameSystem._firstJourney.aren.x);
         await page.keyboard.down("ArrowLeft");
-        await page.waitForFunction(turn => $gameSystem._firstJourney.turn > turn, turnBeforeHold);
+        await page.waitForFunction(x => $gameSystem._firstJourney.aren.x < x, positionBeforeHold);
         await page.keyboard.up("ArrowLeft");
         await page.waitForFunction(() => !$gameSystem._firstJourney.round && !$gamePlayer.isMoving());
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.direction), 4, "Holding a new direction turns and walks through Mira");
@@ -267,11 +271,13 @@ const server = http.createServer((req, res) => {
             const pick = SceneManager._scene._journeyTarget;
             return [pick.targets[pick.index].x, pick.targets[pick.index].y];
         }), [8, 8], "Ground cursor moves spatially to the adjacent tile");
+        const burstStamina = await page.evaluate(() => $gameSystem._firstJourney.mira.sp);
         const partyHp = await page.evaluate(() => FirstJourneyRules.party($gameSystem._firstJourney).map(u => u.hp));
         await page.screenshot({ path: path.join(output, "area-targeting.png") });
         await press("Enter");
         assert.deepEqual(await page.evaluate(() => FirstJourneyRules.party($gameSystem._firstJourney).map(u => u.hp)), partyHp, "Burst spares the party");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.mira.mp), 24);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.mira.sp), burstStamina - 1);
         assert.equal(await page.evaluate(() => FirstJourneyRules.area($gameSystem._firstJourney).enemies.every(enemy => enemy.hp === 0)), true);
         // Track the real camera offsets during an animated step.
         await page.evaluate(() => {
@@ -327,11 +333,11 @@ const server = http.createServer((req, res) => {
         await press("Enter"); // Move
         assert.equal(await page.evaluate(() => SceneManager._scene._journeyCombatMove), true);
         await press("ArrowDown");
-        await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
+        await page.waitForFunction(() => SceneManager._scene._journeyCombatMove && !$gameSystem._firstJourney.round);
         assert.deepEqual(await page.evaluate(() => [$gameSystem._firstJourney.aren.x, $gameSystem._firstJourney.aren.y]), [8, 8]);
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), inspectTurn + 1);
         await page.evaluate(() => { $gameSystem._firstJourney.aren.x = 9; SceneManager._scene.syncJourney(); });
-        await press("Enter"); await press("ArrowRight"); // wall at (10,8)
+        await press("ArrowRight"); // persistent Move, wall at (10,8)
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), inspectTurn + 1);
         assert.equal(await page.evaluate(() => SceneManager._scene._journeyCombatMove), true);
         const blockedCombatFrame = await page.evaluate(() => { window.combatPatterns = []; const original = $gamePlayer.updateAnimation; $gamePlayer.updateAnimation = function() { original.call(this); combatPatterns.push(this.pattern()); }; return Graphics.frameCount; });
@@ -341,7 +347,7 @@ const server = http.createServer((req, res) => {
         assert.ok(await page.evaluate(() => new Set(combatPatterns).size >= 3), "Blocked combat move animates without executing a turn");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), inspectTurn + 1);
         await page.evaluate(() => { delete $gamePlayer.updateAnimation; });
-        await press("Escape");
+        await press("Enter"); // reopen combat commands from persistent Move
         await press("ArrowDown"); await press("ArrowDown"); await press("Enter"); // Guard
         await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.guard), 4);
@@ -365,7 +371,13 @@ const server = http.createServer((req, res) => {
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.direction), spellFacing, "Ground targeting does not turn Aren");
         await press("Escape"); await press("Escape"); // Target and skill cancellation
         await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
-        await press("Escape"); await press("Escape"); // Field menu and back to default combat menu
+        await press("Escape"); // Combat cancel enters Move
+        assert.ok(await page.evaluate(() => SceneManager._scene._journeyCombatMove && !SceneManager._scene._journeyChoices));
+        await press("Escape"); // Move cancel opens normal field menu
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices.width), 280);
+        await press("Escape"); // Closing field menu returns to Move
+        assert.ok(await page.evaluate(() => SceneManager._scene._journeyCombatMove));
+        await press("Enter");
         await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
         await press("Tab");
         const directTurn = await page.evaluate(() => $gameSystem._firstJourney.turn);
@@ -379,6 +391,15 @@ const server = http.createServer((req, res) => {
         await press("ArrowDown"); await press("ArrowDown"); await press("Enter");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), directTurn + 1);
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.mira.guard), 4);
+        await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu && SceneManager._scene._journeyChoices.isOpenAndActive());
+        await press("Escape"); // enter persistent Move while direct commands remain enabled
+        assert.ok(await page.evaluate(() => SceneManager._scene._journeyCombatMove));
+        await press("ArrowLeft");
+        assert.ok(await page.evaluate(() => !!SceneManager._scene._journeyPendingAction));
+        await press("ArrowDown"); await press("ArrowDown"); await press("Enter");
+        await page.waitForFunction(() => !$gamePlayer.isMoving() && !$gameSystem._firstJourney.round);
+        assert.ok(await page.evaluate(() => SceneManager._scene._journeyCombatMove && !SceneManager._scene._journeyChoices), "Move resumes after Mira's direct action");
+        await page.screenshot({ path: path.join(output, "persistent-combat-move.png") });
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney;
             FirstJourneyRules.area(s).enemies.forEach(e => e.hp = 0);

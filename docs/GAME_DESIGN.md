@@ -203,10 +203,18 @@ Villagers struck by single-tile attacks currently warn Aren not to attack people
 in public. They stay alive and remain available for conversation; they give no
 combat rewards. Any future reputation or other penalty is not implemented.
 
-Holding a direction into a wall or solid object keeps Aren’s walking animation
-playing without advancing time or spending resources. Releasing the direction
-returns him to idle. Party walking frames are centered with aligned feet and
+Holding a direction into a wall or solid object keeps the living party’s walking animations
+playing, with companions facing the preceding party member, without advancing time or spending resources. Releasing the direction
+returns the party to idle. Party walking frames are centered with aligned feet and
 are at least as wide and tall as the Guild Steward and Provisioner.
+
+Offensive AoE skills spend their normal cost plus at least 1 of the other
+resource: physical areas require 1 MP and magical areas require 1 SP. This
+applies to party and enemy attacks, even empty or wall-clipped casts. Both
+pools must be sufficient; costs are shown together in skill selection.
+Healing and support buffs retain their normal costs. Only combat actions
+increase the cumulative round counter, shown on the combat timeline.
+Exploration neither increases nor displays that counter.
 
 ## Sequential turns, Speed, and companion commands
 
@@ -229,13 +237,16 @@ block retains that aim even if a faster creature moves away.
 Outside combat, actions and following resolve immediately without initiative
 sorting or sequential delays. Speed-effect durations advance only in combat.
 
-Combat automatically opens a four-option menu between rounds: Move, Skill,
-Guard, and View Turn Order. Move accepts one directional step; blocked moves
-and cancellations spend no action. The top timeline shows faces, names, and
+Combat begins with a four-option menu: Move, Skill, Guard, and View Turn Order.
+Selecting Move or pressing Cancel from this menu enters persistent Move mode.
+Each valid directional step resolves a combat round, then stays in Move mode,
+including after direct companion commands. Enter reopens combat commands; Esc
+opens the normal field menu, which returns to Move when closed. Blocked steps
+and menu navigation spend no action. The top timeline shows faces, names, and
 Speed in execution order, marking the active actor while resolving. View Turn
 Order lets the player select faces with arrows or a click to highlight each
 actor's overworld location, with camera focus when needed. Inspection costs no
-action; Enter/Esc returns to commands. Esc from commands opens the field menu.
+action; Enter/Esc returns to commands. Esc from commands enters Move mode.
 
 Base Speed is 10 for Aren, 8 for Mira, 7 for ordinary goblins, 11 for supporters,
 and 9 for the boss; each level above the first adds 1. Speed changes turn order,

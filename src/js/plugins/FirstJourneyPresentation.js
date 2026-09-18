@@ -20,20 +20,29 @@
         this.center(focus ? focus.x : Math.round(this._realX * 3) / 3, focus ? focus.y : Math.round(this._realY * 3) / 3);
     };
     const directions = { down: [0, 1], left: [-1, 0], right: [1, 0], up: [0, -1] };
-    const originalStepAnime = Game_Player.prototype.hasStepAnime;
-    Game_Player.prototype.hasStepAnime = function() {
+    const originalStepAnime = Game_CharacterBase.prototype.hasStepAnime;
+    Game_CharacterBase.prototype.hasStepAnime = function() {
         const scene = SceneManager._scene, s = current();
-        const walking = s && s.aren.hp > 0 && scene instanceof Scene_Map && scene.isActive() &&
+        const unit = s && (this === $gamePlayer ? s.aren : this === $gameMap.event(1) ? s.mira : null);
+        if (!unit) return originalStepAnime.call(this);
+        const walking = s && s.aren.hp > 0 && unit.hp > 0 && scene instanceof Scene_Map && scene.isActive() &&
             !s.round && !scene._journeyChoices && !scene._journeyDialogue && !scene._journeyTarget &&
-            !$gameMessage.isBusy() && !this.isTransferring() && (!s.combat || scene._journeyCombatMove);
+            !$gameMessage.isBusy() && !$gamePlayer.isTransferring() && (!s.combat || scene._journeyCombatMove);
         const blocked = walking && scene._journeyBlockedWalkKey &&
             (Input.isPressed(scene._journeyBlockedWalkKey) || Graphics.frameCount < scene._journeyBlockedWalkUntil);
-        if (scene && !blocked) scene._journeyBlockedWalkKey = null;
+        if (this === $gamePlayer && scene && !blocked) scene._journeyBlockedWalkKey = null;
         return originalStepAnime.call(this) || !!blocked;
     };
     Scene_Map.prototype.animateJourneyBlockedStep = function(dx, dy) {
         this._journeyBlockedWalkKey = Object.keys(directions).find(key => directions[key][0] === dx && directions[key][1] === dy);
         this._journeyBlockedWalkUntil = Graphics.frameCount + $gamePlayer.animationWait() + 1;
+        const members = R.party(current()).filter(unit => unit.hp > 0);
+        for (let i = 1; i < members.length; i++) {
+            const follower = members[i], leader = members[i - 1];
+            if (follower.x === leader.x && follower.y === leader.y) follower.direction = leader.direction;
+            else R.faceToward(follower, leader);
+        }
+        this.syncJourney();
     };
     function wrapped(bitmap, text, x, y, width, lineHeight = 29) {
         let line = "";
@@ -169,7 +178,7 @@
         const power = Math.round((skill.power + (unit.level - 1) * 2) * (unit.id === "aren" && !skill.basic ? 0.6 + R.mastery(s, selection.id) * 0.2 : 1));
         const speedPower = Math.sign(skill.power) * Math.max(1, Math.round(Math.abs(skill.power) * (unit.id === "aren" ? 0.6 + R.mastery(s, selection.id) * 0.2 : 1)));
         const detail = skill.kind === "speed" ? "Speed " + (skill.power > 0 ? "+" : "") + speedPower + " for " + skill.duration + " rounds" : skill.kind === "guard" ? "Reduce the next hit" : (skill.kind === "damage" ? "Damage " : "Restore HP ") + power;
-        bitmap.drawText(unit.name + " • " + skill.cost + " " + skill.pool.toUpperCase() + " • Range " + skill.range + " • " + detail, 24, Graphics.height - 87, Graphics.width - 48, 26);
+        bitmap.drawText(unit.name + " • " + R.costText(selection.id) + " • Range " + skill.range + " • " + detail, 24, Graphics.height - 87, Graphics.width - 48, 26);
         bitmap.fontSize = 15; bitmap.textColor = "#ffffff";
         bitmap.drawText((preview ? "Select skill to aim    " : selection.targets.length > 1 ? "Arrows: aim on ground    " : "Arrows: turn to aim    ") + "Enter: use skill    Esc: back", 24, Graphics.height - 58, Graphics.width - 48, 30);
         bitmap.baseTexture.update();
@@ -330,19 +339,22 @@
         this.drawJourneyTarget(this._journeyPreview, true);
         return false;
     };
+    Scene_Map.prototype.enterJourneyMove = function() {
+        this.closeJourneyChoices(); this._journeyCombatMove = true; Input.update();
+    };
     Scene_Map.prototype.combatMenu = function() {
         if (!current().combat || current().round) return;
         this._journeyCombatMove = false;
         this.choices([
             { label: "Move", enabled: current().aren.hp > 0, run: () => {
-                this.closeJourneyChoices(); this._journeyCombatMove = true; Input.update();
+                this.enterJourneyMove();
             } },
             { label: "Skill", enabled: current().aren.hp > 0, run: () => this.skillMenu() },
             { label: "Guard", run: () => this.submitJourneyAction({ type: current().aren.hp > 0 ? "guard" : "wait" }) },
             { label: "View Turn Order", run: () => {
                 this.closeJourneyChoices(); this._journeyInspectOrder = true; this._journeyOrderIndex = 0; Input.update();
             } }
-        ], () => this.fieldMenu(), 248);
+        ], () => this.enterJourneyMove(), 248);
         this._journeyCombatMenu = true;
     };
     Scene_Map.prototype.updateJourneyCombatMove = function() {
@@ -351,15 +363,19 @@
         b.fontSize = 20; b.textColor = "#ffdc91";
         b.drawText("Move — choose a direction", 24, Graphics.height - 82, Graphics.width - 48, 30);
         b.fontSize = 16; b.textColor = "#ffffff";
-        b.drawText("Arrow: move one tile    Esc: back    Blocked steps spend no action", 24, Graphics.height - 48, Graphics.width - 48, 28);
+        b.drawText("Arrows: move    Enter: combat commands    Esc: menu", 24, Graphics.height - 48, Graphics.width - 48, 28);
         if (Input.isTriggered("cancel") || TouchInput.isCancelled()) {
-            this._journeyCombatMove = false; b.clear(); this.combatMenu(); return true;
+            b.clear(); this.fieldMenu(); return true;
         }
+        if (Input.isTriggered("ok")) { b.clear(); this.combatMenu(); return true; }
+        if (Input.isTriggered("journeySkills")) { b.clear(); this.skillMenu(); return true; }
+        if (Input.isTriggered("journeyWait")) { b.clear(); this.submitJourneyAction({ type: "wait" }); return true; }
+        if (Input.isTriggered("journeyControl")) { this.toggleMiraCommands(); return true; }
         const key = Object.keys(directions).find(name => Input.isRepeated(name));
         if (key) {
             const [dx, dy] = directions[key]; R.face(current(), dx, dy);
             if (R.validAction(current(), current().aren, { type: "move", dx, dy })) {
-                this._journeyCombatMove = false; b.clear(); this.submitJourneyAction({ type: "move", dx, dy });
+                b.clear(); this.submitJourneyAction({ type: "move", dx, dy });
             } else { this.animateJourneyBlockedStep(dx, dy); if (Input.isTriggered(key)) SoundManager.playBuzzer(); this.syncJourney(); }
         }
         return true;
@@ -378,7 +394,7 @@
         const x0 = 244, width = Graphics.width - x0 - 12, cell = Math.min(88, (width - 16) / Math.max(1, entries.length));
         b.fillRect(x0, 12, width, 104, "rgba(12,20,32,0.96)");
         b.fontSize = 14; b.textColor = "#f4d68c";
-        b.drawText(s.round ? "TURN ORDER → resolving" : "TURN ORDER → fastest first", x0 + 8, 15, width - 16, 22);
+        b.drawText("Round " + s.turn + (s.round ? " • TURN ORDER → resolving" : " • TURN ORDER → fastest first"), x0 + 8, 15, width - 16, 22);
         entries.forEach((entry, index) => {
             const unit = units.find(u => u.id === entry.unitId);
             if (!unit) return;
@@ -437,10 +453,11 @@
         this.ensureJourneyPresentation();
         this.drawJourneyTimeline();
         if (this._journeyInspectOrder) return this.updateJourneyOrderInspection();
-        if (this._journeyCombatMove) return this.updateJourneyCombatMove();
+        if (!current().combat && this._journeyCombatMove) { this._journeyCombatMove = false; this._journeyOverlay.bitmap.clear(); }
         if (this._journeyDialogue) return this.updateJourneyDialogue();
         if (this._journeyTarget) return this.updateJourneyTargeting();
         if (this.updateJourneyEffects()) return true;
+        if (this._journeyCombatMove && !current().round && !this._journeyChoices && !this._journeyPendingAction && !$gamePlayer.isMoving() && !$gameMap.events().some(event => event.isMoving())) return this.updateJourneyCombatMove();
         return this.updateJourneySkillPreview();
     };
 })();

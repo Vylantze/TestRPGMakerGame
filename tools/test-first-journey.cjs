@@ -167,11 +167,11 @@ test("Progress uses integer percentages and lossless integer debug units", () =>
     s.knowledge.burst = { learned: true, observations: 3, practice: 6.25 };
     assert.equal(R.progressText(s, "burst"), "Mastery 34% [625/1800 units] Power 80%");
 });
-test("Empty skills work outside combat and still consume resources and turns", () => {
+test("Empty skills work outside combat and consume resources without counting rounds", () => {
     const s = R.create(); s.mode = "Follow"; s.aren.direction = 6;
     const before = s.aren.sp;
     assert.equal(R.cast(s, "cut"), true);
-    assert.equal(s.aren.sp, before - 1); assert.equal(s.turn, 1); assert.equal(s.combat, false);
+    assert.equal(s.aren.sp, before - 1); assert.equal(s.turn, 0); assert.equal(s.combat, false);
     assert.equal(R.cast(s, "spark", { x: 9, y: 7 }), true);
     assert.equal(s.aren.mp, 17);
     assert.ok(R.targetOptions(s, s.aren, "cut").length);
@@ -252,5 +252,32 @@ test("Both tiles of every wall opening transfer automatically", () => {
             assert.deepEqual([s.aren.x, s.aren.y], link.slice(3));
         }
     }
+});
+test("Offensive AoEs charge both pools once, including empty and wall-clipped casts", () => {
+    for (const id of ["thrust", "sweep", "whirlwind", "burst"]) {
+        const s = R.create(); s.godMode = true; s.aren.direction = 8;
+        const costs = R.skillCosts(id), other = R.skills[id].pool === "sp" ? "mp" : "sp";
+        assert.equal(costs[other], 1);
+        s.aren[other] = 0;
+        const before = [s.aren.sp, s.aren.mp, s.turn];
+        assert.equal(R.cast(s, id, { x: 8, y: 8 }), false);
+        assert.deepEqual([s.aren.sp, s.aren.mp, s.turn], before);
+        s.aren[other] = 1;
+        assert.ok(R.cast(s, id, { x: 8, y: 8 }));
+        assert.equal(s.aren[other], 0); assert.equal(s.turn, 0);
+    }
+    assert.deepEqual(R.skillCosts("cut"), { sp: 1 });
+    assert.deepEqual(R.skillCosts("spark"), { mp: 1 });
+    assert.deepEqual(R.skillCosts("quickening"), { mp: 6 });
+    const s = R.create(); s.mira.level = 2; s.mira.sp = 0;
+    assert.equal(R.use(s, s.mira, "burst", s.aren), false);
+    assert.equal(s.mira.mp, 26);
+});
+test("Only combat actions increase the round counter", () => {
+    const s = R.create(); R.move(s, 1, 0); R.finishTurn(s); R.cast(s, "spark", { x: 10, y: 7 });
+    assert.equal(s.turn, 0);
+    R.area(s).enemies = [{ id: "enemy0", name: "Dummy", x: 10, y: 7, hp: 30, maxHp: 30, sp: 0, mp: 0, level: 1, job: "fighter", step: 0, active: true }];
+    R.finishTurn(s); assert.equal(s.turn, 1);
+    R.area(s).enemies = []; R.combatCheck(s); R.finishTurn(s); assert.equal(s.turn, 1);
 });
 console.log(passed + " rule tests passed.");
