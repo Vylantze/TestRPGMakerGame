@@ -49,14 +49,7 @@ const server = http.createServer((req, res) => {
         await dismissDialogue();
         await page.waitForTimeout(200);
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.name), "Aren");
-        // Simulate loading a town save created before event 9 existed.
-        await page.evaluate(async () => {
-            $gameMap._events[9] = null;
-            await DataManager.saveGame(1);
-            await DataManager.loadGame(1);
-            SceneManager.goto(Scene_Map);
-        });
-        await page.waitForFunction(() => SceneManager._scene instanceof Scene_Map && !!SceneManager._scene._journeyHud && !!$gameMap.event(9));
+        assert.equal(await page.evaluate(() => !!$gameMap.event(9)), true, "New game creates the testing statue");
         await press("ArrowRight");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), 0, "Different-direction tap only turns");
         await press("ArrowDown");
@@ -196,7 +189,7 @@ const server = http.createServer((req, res) => {
         await dismissDialogue();
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney;
-            s.aren.x = 16; s.aren.y = 6; s.aren.direction = 6;
+            s.aren.x = 17; s.aren.y = 6; s.aren.direction = 6;
             s.mira.x = 15; s.mira.y = 6;
             SceneManager._scene.syncJourney();
         });
@@ -208,7 +201,7 @@ const server = http.createServer((req, res) => {
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.direction), 4, "Holding a new direction turns and walks through Mira");
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney;
-            s.aren.x = 16; s.aren.y = 6; s.aren.direction = 6;
+            s.aren.x = 17; s.aren.y = 6; s.aren.direction = 6;
             SceneManager._scene.syncJourney();
         });
         await press("ArrowRight");
@@ -219,8 +212,8 @@ const server = http.createServer((req, res) => {
             s.controlled = "mira"; s.mira.level = 2; s.mira.mp = 29;
             s.mira.x = 8; s.mira.y = 7; s.aren.x = 7; s.aren.y = 7;
             R.area(s).enemies = R.area(s).enemies.slice(0, 2);
-            Object.assign(R.area(s).enemies[0], { x: 9, y: 8, hp: 50 });
-            Object.assign(R.area(s).enemies[1], { x: 8, y: 8, hp: 50 });
+            Object.assign(R.area(s).enemies[0], { x: 9, y: 8, hp: 10 });
+            Object.assign(R.area(s).enemies[1], { x: 8, y: 8, hp: 10 });
             SceneManager._scene.syncJourney();
             SceneManager._scene.beginJourneyTargeting("burst");
         });
@@ -230,10 +223,12 @@ const server = http.createServer((req, res) => {
             const pick = SceneManager._scene._journeyTarget;
             return [pick.targets[pick.index].x, pick.targets[pick.index].y];
         }), [8, 8], "Ground cursor moves spatially to the adjacent tile");
+        const partyHp = await page.evaluate(() => FirstJourneyRules.party($gameSystem._firstJourney).map(u => u.hp));
         await page.screenshot({ path: path.join(output, "area-targeting.png") });
         await press("Enter");
+        assert.deepEqual(await page.evaluate(() => FirstJourneyRules.party($gameSystem._firstJourney).map(u => u.hp)), partyHp, "Burst spares the party");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.mira.mp), 24);
-        assert.equal(await page.evaluate(() => FirstJourneyRules.area($gameSystem._firstJourney).enemies.every(enemy => enemy.hp < 50)), true);
+        assert.equal(await page.evaluate(() => FirstJourneyRules.area($gameSystem._firstJourney).enemies.every(enemy => enemy.hp === 0)), true);
         await page.waitForTimeout(300);
         assert.deepEqual(errors, []);
         console.log("PASS MZ boot, new game, movement, all menus, control switching, transfer, skill targeting, combat checkpoint, engine save/load, defeat return, rest, shopping and ending; no console errors.");

@@ -85,20 +85,22 @@ companion AI turn toward their intended target before attacking.
 | Whirlwind | All eight surrounding tiles | Level 3 fighters |
 | Radiant Burst | A 3×3 square centered on a selected ground tile, within four walking steps | Mira at level 2 |
 
-Damage skills hit living creatures in the footprint, including allies and
-villagers, but excluding the caster. They cost resources once and grant
-practice once per cast, including empty casts. Walls clip their footprints. The gold cursor selects an aim point and
-amber tiles preview the entire affected area. For ground-aimed skills, arrows move
-the cursor spatially; empty ground is valid. Healing and revival affect the
-party member on the chosen tile, if any. Skills can be used outside combat.
-Villagers respond to a hit with a public-behavior warning; they remain
-unharmed and available for conversation, with no reward or penalty yet. Mira uses Burst against
-clustered enemies in Support/Attack mode, or the player can cast it directly.
-Aren observes and learns these techniques using the usual prerequisites.
+Offensive AoEs hit enemies only; healing and buff AoEs affect allies only, relative
+to the caster. Neutral villagers are excluded from offensive AoEs. Single-tile
+skills can affect either side. Ember, Light Lance and Mend affect one chosen tile
+up to four tiles away; sword basics affect only the tile directly ahead.
+AoE classification uses the full shape even when walls clip its footprint.
+Skills cost resources once and grant practice once per cast, including empty
+casts. The gold cursor selects an aim point; amber tiles preview the footprint.
+Ground cursors move spatially with arrows, and skills work outside combat.
+Single-tile attacks on villagers trigger a warning without harming them or
+awarding rewards. Mira uses Burst against clusters in Support/Attack mode.
+Aren learns these techniques using the usual prerequisites.
 
-Open shrine doorways mark every transfer. Walk onto the central doorway tile
-to enter or leave automatically. Arrival is beside the return doorway to avoid
-an immediate bounce back. Transfers retain the area-entry autosave.
+Passages are two adjacent floor tiles recessed into the boundary walls, without
+doorway sprites. Walking into either tile transfers automatically. Arrival is
+inside the destination map to prevent immediate return transfers. Area-entry
+autosaves are retained.
 
 ## Temporary all-skills statue
 
@@ -218,3 +220,6 @@ engine files and any default title music are reused from the existing RPG Maker
 MZ project. Those existing files
 remain subject to their original RPG Maker licenses. The prototype has not been
 packaged or published as a distributable game.
+
+Save compatibility: start a new game after this update. Legacy-save migrations
+are not supported; saves created with the current build still save and load normally.

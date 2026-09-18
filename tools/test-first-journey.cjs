@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const R = require("../Project1/js/plugins/FirstJourneyRules.js");
+const R = require("../src/js/plugins/FirstJourneyRules.js");
 let passed = 0;
 function test(name, run) { run(); passed++; console.log("PASS " + name); }
 function shrine() { const s = R.create(); R.travel(s, 2, 2, 9); return s; }
@@ -130,7 +130,7 @@ test("Facing shapes rotate in every direction; sword cannot strike behind", () =
         assert.equal(R.footprint(s, s.aren, "whirlwind").length, 8);
     }
 });
-test("Area attacks hit creatures in the hitbox, charge once, and practice once", () => {
+test("Area attacks hit only enemies in the hitbox, charge once, and practice once", () => {
     for (const id of ["thrust", "sweep", "whirlwind", "burst"]) {
         const s = R.create(); s.aren.x = 8; s.aren.y = 8; s.aren.direction = 6;
         s.knowledge[id] = { learned: true, practice: 0, observations: 3 };
@@ -142,7 +142,7 @@ test("Area attacks hit creatures in the hitbox, charge once, and practice once",
         assert.equal(R.use(s, s.aren, id, id === "burst" ? center : foes[0]), true);
         assert.ok(foes.every(enemy => enemy.hp < 99));
         assert.equal(s.aren[pool], before - R.skills[id].cost);
-        assert.equal(s.knowledge[id].practice, 1); assert.ok(s.mira.hp < hp);
+        assert.equal(s.knowledge[id].practice, 1); assert.equal(s.mira.hp, hp);
     }
 });
 test("Ground bursts work without an enemy at their center and respect walls", () => {
@@ -153,10 +153,11 @@ test("Ground bursts work without an enemy at their center and respect walls", ()
     assert.ok(!tiles.some(tile => tile.x === 10 && tile.y === 8));
 });
 test("Walk-on passages transfer once, save entry, and do not react to interaction", () => {
-    const s = R.create(); s.aren.x = 16; s.aren.y = 6; s.aren.direction = 6;
+    const s = R.create(); s.aren.x = 17; s.aren.y = 6; s.aren.direction = 6;
     assert.equal(R.interact(s), "none"); assert.equal(s.mapId, 1);
     assert.equal(R.move(s, 1, 0), true); assert.equal(s.mapId, 2);
     assert.equal(s.checkpoints.at(-1).reason, "area-entry");
+    assert.equal(R.move(s, -1, 0), true); assert.equal(s.mapId, 2);
     assert.equal(R.move(s, -1, 0), true); assert.equal(s.mapId, 1);
     assert.deepEqual([s.aren.x, s.aren.y], [16, 6]);
 });
@@ -198,5 +199,58 @@ test("Villagers inside hitboxes warn without dying, rewards, or combat", () => {
     assert.ok(s.log.filter(line => line.includes("Do not attack people in public")).length === 3);
     assert.equal(s.gold, gold); assert.equal(s.combat, false);
     assert.equal(R.interact(s), "guild");
+});
+
+test("Single-tile spells aim at either side at range, including healing enemies", () => {
+    const s = R.create(); Object.assign(s.aren, { x: 8, y: 8 }); Object.assign(s.mira, { x: 9, y: 8 });
+    const foe = { id: "enemy0", name: "Dummy", x: 11, y: 8, hp: 3, maxHp: 22, level: 1 };
+    R.area(s).enemies = [foe];
+    for (const id of ["spark", "light", "mend"]) {
+        assert.equal(R.isArea(id), false);
+        assert.equal(R.footprint(s, s.aren, id, foe).length, 1);
+        assert.ok(R.targetOptions(s, s.aren, id).some(p => p.x === foe.x && p.y === foe.y));
+    }
+    const hp = s.mira.hp; R.use(s, s.aren, "spark", s.mira); assert.ok(s.mira.hp < hp);
+    R.use(s, s.aren, "mend", foe); assert.equal(foe.hp, 12);
+    R.use(s, s.aren, "spark", foe); assert.equal(foe.hp, 6);
+});
+test("AoE faction rules apply to enemy damage, healing, buffs and revival", () => {
+    const s = R.create(); Object.assign(s.aren, { x: 8, y: 8 }); Object.assign(s.mira, { x: 9, y: 8, hp: 10 });
+    const foe = { id: "enemy0", name: "Dummy", x: 9, y: 7, hp: 50, maxHp: 50, level: 1, mp: 99, sp: 99 };
+    R.area(s).enemies = [foe];
+    assert.deepEqual(R.affected(s, foe, "burst", s.aren).map(u => u.id), ["aren", "mira"]);
+    for (const kind of ["heal", "guard", "revive"]) {
+        R.skills.testSupport = { name: "Test support", kind, shape: "burst", range: 4, pool: "mp", cost: 0, power: 5 };
+        try {
+            if (kind === "revive") { s.mira.hp = 0; foe.hp = 0; }
+            const targets = R.affected(s, s.aren, "testSupport", s.aren);
+            assert.ok(targets.includes(s.mira)); assert.ok(!targets.includes(foe));
+            R.use(s, s.aren, "testSupport", s.aren);
+            if (kind === "guard") assert.equal(s.mira.guard, 3);
+            else assert.ok(s.mira.hp > 0);
+            assert.deepEqual(R.affected(s, foe, "testSupport", s.aren).map(u => u.id), ["enemy0"]);
+        } finally { delete R.skills.testSupport; }
+    }
+});
+test("Offensive AoEs ignore villagers even when walls clip the hitbox", () => {
+    const s = R.create(); Object.assign(s.aren, { x: 8, y: 6, direction: 8 });
+    assert.equal(R.affected(s, s.aren, "burst", { x: 8, y: 5 }).length, 0);
+    assert.ok(R.affected(s, s.aren, "spark", { x: 8, y: 5 }).some(u => u.villager));
+    Object.assign(s.aren, { x: 6, y: 2, direction: 4 }); Object.assign(s.mira, { x: 5, y: 1 });
+    assert.equal(R.footprint(s, s.aren, "sweep").length, 1);
+    assert.deepEqual(R.affected(s, s.aren, "sweep"), []);
+});
+test("Both tiles of every wall opening transfer automatically", () => {
+    for (const [mapId, map] of Object.entries(R.maps)) for (const link of [map.exit, map.back].filter(Boolean)) {
+        for (const tile of R.passageTiles(link)) {
+            const s = R.create(); R.travel(s, Number(mapId), tile.x === 0 ? 1 : tile.x - 1, tile.y);
+            R.area(s).enemies = [];
+            assert.equal(R.wall(s, tile.x, tile.y), false);
+            const dx = tile.x === 0 ? -1 : 1;
+            assert.equal(R.wall(s, tile.x + dx, tile.y), true);
+            R.move(s, dx, 0); assert.equal(s.mapId, link[2]);
+            assert.deepEqual([s.aren.x, s.aren.y], link.slice(3));
+        }
+    }
 });
 console.log(passed + " rule tests passed.");

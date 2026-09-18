@@ -1,5 +1,5 @@
 const assert = require("node:assert/strict");
-const R = require("../Project1/js/plugins/FirstJourneyRules.js");
+const R = require("../src/js/plugins/FirstJourneyRules.js");
 const s = R.create();
 function route(target, within = 1) {
     const unit = s[s.controlled], queue = [{ x: unit.x, y: unit.y, first: null }];
@@ -9,7 +9,7 @@ function route(target, within = 1) {
         if (R.distance(node, target) <= within && node.first) return node.first;
         for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) {
             const x = node.x + dx, y = node.y + dy, key = x + "," + y;
-            if (!seen.has(key) && !R.wall(s, x, y) && !R.solid(s, x, y) && ![...R.enemies(s), ...R.party(s).filter(member => member !== unit && member.hp > 0)].some(other => other.x === x && other.y === y)) {
+            if (!seen.has(key) && !R.wall(s, x, y) && ![R.maps[s.mapId].exit, R.maps[s.mapId].back].filter(Boolean).flatMap(R.passageTiles).some(tile => tile.x === x && tile.y === y) && !R.solid(s, x, y) && ![...R.enemies(s), ...R.party(s).filter(member => member !== unit && member.hp > 0)].some(other => other.x === x && other.y === y)) {
                 seen.add(key); queue.push({ x, y, first: node.first || [dx, dy] });
             }
         }
@@ -37,7 +37,7 @@ function walk(target) {
     assert.ok(R.distance(s[s.controlled], target) <= 1);
     R.faceToward(s[s.controlled], target);
 }
-walk({ x: 17, y: 6 }); R.move(s, ...R.directions[s.aren.direction]); assert.equal(s.mapId, 2);
+walk({ x: 18, y: 6 }); R.move(s, ...R.directions[s.aren.direction]); assert.equal(s.mapId, 2);
 for (const mapId of [2, 3]) {
     while (R.enemies(s).length) {
         const enemy = R.enemies(s)[0];
@@ -49,8 +49,8 @@ for (const mapId of [2, 3]) {
     if (mapId === 2) { const exit = R.maps[2].exit; walk({ x: exit[0], y: exit[1] }); R.move(s, ...R.directions[s.aren.direction]); assert.equal(s.mapId, 3); }
 }
 assert.equal(s.quest, "return");
-walk({ x: 1, y: 7 }); R.move(s, ...R.directions[s.aren.direction]); assert.equal(s.mapId, 2);
-walk({ x: 1, y: 9 }); R.move(s, ...R.directions[s.aren.direction]); assert.equal(s.mapId, 1);
+walk({ x: 0, y: 7 }); R.move(s, ...R.directions[s.aren.direction]); assert.equal(s.mapId, 2);
+walk({ x: 0, y: 9 }); R.move(s, ...R.directions[s.aren.direction]); assert.equal(s.mapId, 1);
 walk({ x: 8, y: 5 }); assert.equal(R.interact(s), "guild");
 assert.equal(s.defeated, 0);
 assert.ok(R.learned(s, "light"));

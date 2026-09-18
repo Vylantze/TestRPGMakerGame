@@ -123,7 +123,7 @@
     1556,
     1556,
     1556,
-    1559,
+    1556,
     1559,
     1556,
     1556,
@@ -146,7 +146,7 @@
     1556,
     1556,
     1556,
-    1559,
+    1556,
     1559,
     1559,
     1559,
@@ -239,7 +239,6 @@
     1556,
     1556,
     1559,
-    1559,
     1556,
     1556,
     1556,
@@ -261,8 +260,9 @@
     1556,
     1556,
     1556,
-    1559,
+    1556,
     1559,
+    1556,
     1556,
     1556,
     1556,
@@ -2078,7 +2078,7 @@
     0,
     0,
     0,
-    1,
+    0,
     1,
     0,
     0,
@@ -2101,7 +2101,7 @@
     0,
     0,
     0,
-    1,
+    0,
     1,
     1,
     1,
@@ -2194,7 +2194,6 @@
     0,
     0,
     1,
-    1,
     0,
     0,
     0,
@@ -2216,8 +2215,9 @@
     0,
     0,
     0,
-    1,
+    0,
     1,
+    0,
     0,
     0,
     0,
@@ -2623,126 +2623,8 @@
         }
       ]
     },
-    {
-      "id": 7,
-      "name": "Walk-through shrine passage",
-      "note": "",
-      "x": 21,
-      "y": 3,
-      "pages": [
-        {
-          "conditions": {
-            "actorId": 1,
-            "actorValid": false,
-            "itemId": 1,
-            "itemValid": false,
-            "selfSwitchCh": "A",
-            "selfSwitchValid": false,
-            "switch1Id": 1,
-            "switch1Valid": false,
-            "switch2Id": 1,
-            "switch2Valid": false,
-            "variableId": 1,
-            "variableValid": false,
-            "variableValue": 0
-          },
-          "directionFix": true,
-          "image": {
-            "tileId": 0,
-            "characterName": "!$Gate1",
-            "characterIndex": 0,
-            "direction": 6,
-            "pattern": 1
-          },
-          "list": [
-            {
-              "code": 0,
-              "indent": 0,
-              "parameters": []
-            }
-          ],
-          "moveFrequency": 3,
-          "moveRoute": {
-            "list": [
-              {
-                "code": 0,
-                "parameters": []
-              }
-            ],
-            "repeat": true,
-            "skippable": false,
-            "wait": false
-          },
-          "moveSpeed": 4,
-          "moveType": 0,
-          "priorityType": 1,
-          "stepAnime": false,
-          "through": true,
-          "trigger": 0,
-          "walkAnime": false
-        }
-      ]
-    },
-    {
-      "id": 8,
-      "name": "Walk-through shrine passage",
-      "note": "",
-      "x": 1,
-      "y": 9,
-      "pages": [
-        {
-          "conditions": {
-            "actorId": 1,
-            "actorValid": false,
-            "itemId": 1,
-            "itemValid": false,
-            "selfSwitchCh": "A",
-            "selfSwitchValid": false,
-            "switch1Id": 1,
-            "switch1Valid": false,
-            "switch2Id": 1,
-            "switch2Valid": false,
-            "variableId": 1,
-            "variableValid": false,
-            "variableValue": 0
-          },
-          "directionFix": true,
-          "image": {
-            "tileId": 0,
-            "characterName": "!$Gate1",
-            "characterIndex": 0,
-            "direction": 6,
-            "pattern": 1
-          },
-          "list": [
-            {
-              "code": 0,
-              "indent": 0,
-              "parameters": []
-            }
-          ],
-          "moveFrequency": 3,
-          "moveRoute": {
-            "list": [
-              {
-                "code": 0,
-                "parameters": []
-              }
-            ],
-            "repeat": true,
-            "skippable": false,
-            "wait": false
-          },
-          "moveSpeed": 4,
-          "moveType": 0,
-          "priorityType": 1,
-          "stepAnime": false,
-          "through": true,
-          "trigger": 0,
-          "walkAnime": false
-        }
-      ]
-    },
+    null,
+    null,
     null,
     {
       "id": 10,

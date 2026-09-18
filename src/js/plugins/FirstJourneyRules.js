@@ -30,13 +30,13 @@
             "###################", "#.................#", "#..###.....###....#", "#..###.....###....#",
             "#.................#", "#.................#", "#.................#", "#.................#",
             "#.................#", "#..###.....###....#", "#..###.....###....#", "#.................#", "###################"
-        ], rest: [5, 5], debugStatue: [5, 7], exit: [17, 6, 2, 2, 9], npcs: [{ x: 8, y: 5, type: "guild", name: "Guild steward" }, { x: 12, y: 5, type: "shop", name: "Provisioner" }], enemies: [] },
+        ], rest: [5, 5], debugStatue: [5, 7], exit: [18, 6, 2, 2, 9], npcs: [{ x: 8, y: 5, type: "guild", name: "Guild steward" }, { x: 12, y: 5, type: "shop", name: "Provisioner" }], enemies: [] },
         2: { name: "Abandoned Shrine • Approach", subtitle: "Clear the goblin nest", grid: [
             "#######################", "#.........#...........#", "#.........#...........#", "#.....................#",
             "#.........#...........#", "####..#########..######", "#.........#...........#", "#.....................#",
             "#.........#...........#", "#.....................#", "#.........#...........#", "####..#########..######",
             "#.........#...........#", "#.....................#", "#.........#...........#", "#.........#...........#", "#######################"
-        ], rest: [12, 9], exit: [21, 3, 3, 2, 7], back: [1, 9, 1, 16, 6], caches: [[4, 3], [19, 13]], enemies: [
+        ], rest: [12, 9], exit: [22, 3, 3, 2, 7], back: [0, 9, 1, 16, 6], caches: [[4, 3], [19, 13]], enemies: [
             { x: 7, y: 8, name: "Goblin lookout", job: "fighter", level: 1, hp: 22 },
             { x: 6, y: 3, name: "Goblin forager", job: "fighter", level: 1, hp: 24 },
             { x: 17, y: 7, name: "Goblin sentry", job: "fighter", level: 2, hp: 29 },
@@ -46,11 +46,16 @@
             "###################", "#.................#", "#..##.........##..#", "#..##.........##..#",
             "#.................#", "#.................#", "####..#######..####", "#.................#",
             "#.................#", "#..##.........##..#", "#..##.........##..#", "#.................#", "###################"
-        ], rest: [5, 8], back: [1, 7, 2, 20, 3], caches: [[13, 10]], enemies: [
+        ], rest: [5, 8], back: [0, 7, 2, 20, 3], caches: [[13, 10]], enemies: [
             { x: 12, y: 4, name: "Goblin sentry", job: "fighter", level: 2, hp: 28 },
             { x: 13, y: 3, name: "Ruk, nest leader", job: "fighter", level: 3, hp: 62, boss: true }
         ] }
     };
+    // Two floor tiles replace each side-wall doorway.
+    const passageTiles = link => [{ x: link[0], y: link[1] }, { x: link[0], y: link[1] + 1 }];
+    for (const map of Object.values(maps)) for (const link of [map.exit, map.back].filter(Boolean)) {
+        for (const { x, y } of passageTiles(link)) map.grid[y] = map.grid[y].slice(0, x) + "." + map.grid[y].slice(x + 1);
+    }
     const distance = (a, b) => Math.abs(a.x - b.x) + Math.abs(a.y - b.y);
     const maxStats = actor => ({ hp: (actor.id === "aren" ? 44 : 36) + (actor.level - 1) * 6, sp: 22 + (actor.level - 1) * 2, mp: (actor.id === "aren" ? 18 : 26) + (actor.level - 1) * 3 });
     const jobSkills = actor => (jobs[actor.job] || []).filter(entry => entry.level <= actor.level).map(entry => entry.skill);
@@ -154,16 +159,27 @@
     function villagers(state) {
         return (maps[state.mapId].npcs || []).map((npc, index) => ({ ...npc, id: "villager" + index, villager: true, hp: 1 }));
     }
-    function affected(state, user, id, target = aim(user, id)) {
+    // Classify the full shape, not the wall-clipped footprint or occupant count.
+    function isArea(id) {
         const skill = skills[id];
-        if (skill.kind === "guard") return [user];
-        const tiles = footprint(state, user, id, target);
-        const units = skill.kind === "damage" ? [...party(state), ...enemies(state), ...villagers(state)].filter(unit => unit.id !== user.id && unit.hp > 0) : party(state).filter(unit => skill.kind === "revive" ? unit.hp <= 0 : unit.hp > 0);
-        return units.filter(unit => tiles.some(tile => tile.x === unit.x && tile.y === unit.y));
+        return ["arc", "around", "burst"].includes(skill.shape) || (["front", "line"].includes(skill.shape) && skill.range > 1);
+    }
+    const faction = unit => unit.villager ? "neutral" : ["aren", "mira"].includes(unit.id) ? "party" : "enemy";
+    const targetRule = id => isArea(id) ? skills[id].kind === "damage" ? "AoE: enemies" : "AoE: allies" : "Single tile: either side";
+    function affected(state, user, id, target = aim(user, id)) {
+        const skill = skills[id], tiles = footprint(state, user, id, target);
+        return [...party(state), ...area(state).enemies, ...villagers(state)].filter(unit => {
+            if (skill.kind === "revive" ? unit.hp > 0 : unit.hp <= 0) return false;
+            if (isArea(id)) {
+                const sameSide = faction(unit) === faction(user);
+                if (skill.kind === "damage" ? sameSide || faction(unit) === "neutral" : !sameSide) return false;
+            }
+            return tiles.some(tile => tile.x === unit.x && tile.y === unit.y);
+        });
     }
     function targetOptions(state, user, id) {
         const skill = skills[id];
-        if (skill.shape && skill.shape !== "burst" || skill.kind === "guard") return [aim(user, id)];
+        if (skill.shape && skill.shape !== "burst" || (skill.kind === "guard" && skill.range === 0 && !skill.shape)) return [aim(user, id)];
         const candidates = [];
         for (let y = user.y - skill.range; y <= user.y + skill.range; y++) for (let x = user.x - skill.range; x <= user.x + skill.range; x++) candidates.push({ x, y, name: "Ground (" + x + ", " + y + ")" });
         return candidates.filter(target => canTarget(state, user, id, target));
@@ -192,7 +208,7 @@
     function use(state, user, id, target = aim(user, id)) {
         const skill = skills[id];
         if (!skill || user.hp <= 0 || user[skill.pool] < skill.cost) return false;
-        if (skill.kind === "guard") target = user;
+        if (skill.kind === "guard" && skill.range === 0 && !skill.shape) target = user;
         if (target.hp !== undefined && !canTarget(state, user, id, target)) return false;
         if ((!skill.shape || skill.shape === "burst") && !canTarget(state, user, id, target)) return false;
         user[skill.pool] -= skill.cost;
@@ -203,18 +219,18 @@
         if (!targets.length && globalThis.FirstJourneyRules.onSkill) globalThis.FirstJourneyRules.onSkill({ mapId: state.mapId, skill: id, user: { ...user }, target: { ...target }, change: 0 });
         for (const target of targets) {
             const beforeHp = target.hp;
-            if (target.villager) {
+            if (target.villager && skill.kind === "damage") {
                 log(state, target.name + ': "Aren! Do not attack people in public!"');
                 if (globalThis.FirstJourneyRules.onSkill) globalThis.FirstJourneyRules.onSkill({ mapId: state.mapId, skill: id, user: { ...user }, target: { ...target }, change: 0 });
                 continue;
             }
             if (skill.kind === "heal" || skill.kind === "revive") {
-                const amount = Math.min(maxStats(target).hp - target.hp, power);
+                const amount = Math.min((target.maxHp || (target.villager ? 1 : maxStats(target).hp)) - target.hp, power);
                 target.hp += amount;
                 log(state, user.name + " uses " + skill.name + ": " + target.name + " +" + amount + " HP.");
             } else if (skill.kind === "guard") {
-                user.guard = Math.max(1, power);
-                log(state, user.name + " uses Brace: the next hit is reduced.");
+                target.guard = Math.max(1, power);
+                log(state, user.name + " uses " + skill.name + ": " + target.name + " guards the next hit.");
             } else {
                 const amount = Math.max(1, power - (target.guard || 0));
                 target.guard = 0;
@@ -364,7 +380,7 @@
                 faceToward(follower, previous); follower.x = previous.x; follower.y = previous.y; followed = true;
             } else if (distance(follower, previous) > 1) followed = approach(state, follower, previous);
         }
-        const portal = [maps[state.mapId].exit, maps[state.mapId].back].filter(Boolean).find(link => unit.x === link[0] && unit.y === link[1]);
+        const portal = [maps[state.mapId].exit, maps[state.mapId].back].filter(Boolean).find(link => passageTiles(link).some(tile => unit.x === tile.x && unit.y === tile.y));
         if (portal) { state.turn++; travel(state, portal[2], portal[3], portal[4]); }
         else finishTurn(state, followed);
         return true;
@@ -421,7 +437,7 @@
         for (const npc of map.npcs || []) if (npc.x === front.x && npc.y === front.y) return npc.type;
         log(state, "Face a person or object, then press Enter."); return "none";
     }
-    const api = { aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
+    const api = { isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     globalThis.FirstJourneyRules = api;
 })();

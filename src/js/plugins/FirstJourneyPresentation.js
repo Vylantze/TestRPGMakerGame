@@ -39,28 +39,6 @@
         originalSync.call(this);
         const s = current();
         if ($gameMap.mapId() !== s.mapId) return;
-        // Saves made before the temporary statue was added lack its Game_Event.
-        if (R.maps[s.mapId].debugStatue && !$gameMap.event(9) && $dataMap.events[9] && this._spriteset) {
-            const statue = new Game_Event(s.mapId, 9);
-            $gameMap._events[9] = statue;
-            const sprite = new Sprite_Character(statue);
-            this._spriteset._characterSprites.push(sprite);
-            this._spriteset._tilemap.addChild(sprite);
-        }
-        const rest = $gameMap.event(2);
-        if (rest) {
-            rest.setImage(s.mapId === 1 ? "!Other2" : "!Flame", s.mapId === 1 ? 4 : 2);
-            rest.setDirectionFix(false); rest.setDirection(2); rest.setDirectionFix(true);
-            rest.setPattern(1); rest.setStepAnime(s.mapId !== 1); rest.setThrough(false);
-        }
-        // Old saves may have placed a character on a formerly walkable object.
-        for (const unit of R.party(s)) {
-            if (R.solid(s, unit.x, unit.y)) {
-                const open = Object.values(R.directions).map(([dx, dy]) => ({ x: unit.x + dx, y: unit.y + dy })).find(p => !R.wall(s, p.x, p.y) && !R.solid(s, p.x, p.y) && ![...R.party(s), ...R.enemies(s)].some(other => other !== unit && other.hp > 0 && other.x === p.x && other.y === p.y));
-                if (open) { Object.assign(unit, open); (unit.id === "aren" ? $gamePlayer : $gameMap.event(1)).locate(unit.x, unit.y); }
-            }
-        }
-        for (const id of [3, 4, 5, 6]) if ($gameMap.event(id)) $gameMap.event(id).setThrough(false);
         this.updateJourneyDefeatedSprites();
     };
     Scene_Map.prototype.updateJourneyDefeatedSprites = function() {
@@ -149,7 +127,7 @@
         });
         bitmap.fillRect(8, Graphics.height - 104, Graphics.width - 16, 96, "#111f31");
         bitmap.fontSize = 22; bitmap.textColor = "#ffdc91";
-        bitmap.drawText(R.skills[selection.id].name + " → " + target.name, 24, Graphics.height - 98, Graphics.width - 48, 32);
+        bitmap.drawText(R.skills[selection.id].name + " [" + R.targetRule(selection.id) + "] → " + target.name, 24, Graphics.height - 98, Graphics.width - 48, 32);
         bitmap.fontSize = 17; bitmap.textColor = "#ffffff";
         bitmap.drawText((selection.targets.length > 1 ? "Arrows: aim on ground    " : "Facing determines hitbox    ") + "Enter: use skill    Esc: back", 24, Graphics.height - 58, Graphics.width - 48, 30);
         bitmap.baseTexture.update();

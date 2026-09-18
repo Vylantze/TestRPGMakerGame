@@ -2,7 +2,7 @@
 // Original data is preserved in Addons/FirstJourneyBackup before the first build.
 const fs = require("node:fs");
 const path = require("node:path");
-const root = path.resolve(__dirname, "../Project1");
+const root = path.resolve(__dirname, "../src");
 const R = require(path.join(root, "js/plugins/FirstJourneyRules.js"));
 const read = name => JSON.parse(fs.readFileSync(path.join(root, "data", name), "utf8"));
 const write = (name, data) => fs.writeFileSync(path.join(root, "data", name), JSON.stringify(data, null, 2) + "\n");
@@ -28,12 +28,6 @@ for (const [key, definition] of Object.entries(R.maps)) {
     events[2].pages[0].stepAnime = id !== 1;
     (definition.npcs || []).forEach((npc, index) => { events[3 + index] = event(3 + index, npc.name, npc.x, npc.y, "People1", index); });
     (definition.caches || []).forEach((point, index) => { events[5 + index] = event(5 + index, "Abandoned supplies", ...point, "!Chest", 0); });
-    [definition.exit, definition.back].filter(Boolean).forEach((link, index) => {
-        const doorway = event(7 + index, "Walk-through shrine passage", link[0], link[1], "!$Gate1", 0);
-        Object.assign(doorway.pages[0], { through: true, directionFix: true, walkAnime: false });
-        doorway.pages[0].image.direction = 6;
-        events[7 + index] = doorway;
-    });
     if (definition.debugStatue) {
         events[9] = event(9, "Temporary Goddess statue: toggle god mode", ...definition.debugStatue, "!Other2", 4);
         events[9].pages[0].directionFix = true;
