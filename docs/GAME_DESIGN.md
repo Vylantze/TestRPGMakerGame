@@ -203,6 +203,11 @@ Villagers struck by single-tile attacks currently warn Aren not to attack people
 in public. They stay alive and remain available for conversation; they give no
 combat rewards. Any future reputation or other penalty is not implemented.
 
+Holding a direction into a wall or solid object keeps Aren’s walking animation
+playing without advancing time or spending resources. Releasing the direction
+returns him to idle. Party walking frames are centered with aligned feet and
+are at least as wide and tall as the Guild Steward and Provisioner.
+
 ## Sequential turns, Speed, and companion commands
 
 Outside combat, only Aren receives player commands; Mira acts automatically.

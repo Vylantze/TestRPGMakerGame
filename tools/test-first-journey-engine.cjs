@@ -62,6 +62,34 @@ const server = http.createServer((req, res) => {
         await press("Enter");
         assert.equal(await page.evaluate(() => SceneManager._scene._journeyDialogue.participants.includes("Mira")), true);
         await dismissDialogue();
+        const walkingState = await page.evaluate(() => ({ aren: { ...$gameSystem._firstJourney.aren }, mira: { ...$gameSystem._firstJourney.mira } }));
+        for (const obstacle of [{ x: 5, y: 6, direction: 2, key: "ArrowDown", dx: 0, dy: 1 }, { x: 1, y: 1, direction: 4, key: "ArrowLeft", dx: -1, dy: 0 }]) {
+            const before = await page.evaluate(o => {
+                const s = $gameSystem._firstJourney;
+                Object.assign(s.aren, { x: o.x, y: o.y, direction: o.direction });
+                SceneManager._scene.syncJourney();
+                if (FirstJourneyRules.validAction(s, s.aren, { type: "move", dx: o.dx, dy: o.dy })) throw Error("Expected solid obstacle");
+                window.blockedPatterns = [];
+                const original = $gamePlayer.updateAnimation;
+                $gamePlayer.updateAnimation = function() { original.call(this); blockedPatterns.push(this.pattern()); };
+                return [s.turn, s.aren.hp, s.aren.sp, s.aren.mp];
+            }, obstacle);
+            await page.waitForFunction(() => !$gamePlayer.isMoving());
+            const frame = await page.evaluate(() => Graphics.frameCount);
+            await page.keyboard.down(obstacle.key);
+            await page.waitForFunction(f => Graphics.frameCount >= f + 50, frame);
+            await page.keyboard.up(obstacle.key);
+            assert.ok(await page.evaluate(() => new Set(blockedPatterns).size >= 3), "Blocked walking cycles all walking frames");
+            assert.deepEqual(await page.evaluate(() => { const s = $gameSystem._firstJourney; return [s.turn, s.aren.hp, s.aren.sp, s.aren.mp]; }), before, "Blocked walking spends no turn or resources");
+            assert.deepEqual(await page.evaluate(() => [$gamePlayer.x, $gamePlayer.y]), [obstacle.x, obstacle.y]);
+            const released = await page.evaluate(() => { delete $gamePlayer.updateAnimation; return Graphics.frameCount; });
+            await page.waitForFunction(f => Graphics.frameCount >= f + 30, released);
+            assert.equal(await page.evaluate(() => $gamePlayer.pattern()), 1, "Releasing blocked movement returns to idle");
+        }
+        await page.evaluate(saved => {
+            Object.assign($gameSystem._firstJourney.aren, saved.aren); Object.assign($gameSystem._firstJourney.mira, saved.mira);
+            SceneManager._scene.syncJourney();
+        }, walkingState);
         for (const key of ["a", "c", "k", "i", "Escape"]) {
             console.log("Opening menu " + key);
             await press(key);
@@ -100,7 +128,7 @@ const server = http.createServer((req, res) => {
         await press("Tab");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.controlled), "aren");
         await page.screenshot({ path: path.join(output, "town.png") });
-        assert.deepEqual(await page.evaluate(() => [$gamePlayer.characterName(), $gameMap.event(1).characterName()]), ["$ArenJourney-v2", "$MiraJourney-v2"]);
+        assert.deepEqual(await page.evaluate(() => [$gamePlayer.characterName(), $gameMap.event(1).characterName()]), ["$ArenJourney-v3", "$MiraJourney-v3"]);
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney;
             s.aren.x = 6; s.aren.y = 7; s.aren.direction = 4;
@@ -306,6 +334,13 @@ const server = http.createServer((req, res) => {
         await press("Enter"); await press("ArrowRight"); // wall at (10,8)
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), inspectTurn + 1);
         assert.equal(await page.evaluate(() => SceneManager._scene._journeyCombatMove), true);
+        const blockedCombatFrame = await page.evaluate(() => { window.combatPatterns = []; const original = $gamePlayer.updateAnimation; $gamePlayer.updateAnimation = function() { original.call(this); combatPatterns.push(this.pattern()); }; return Graphics.frameCount; });
+        await page.keyboard.down("ArrowRight");
+        await page.waitForFunction(f => Graphics.frameCount >= f + 40, blockedCombatFrame);
+        await page.keyboard.up("ArrowRight");
+        assert.ok(await page.evaluate(() => new Set(combatPatterns).size >= 3), "Blocked combat move animates without executing a turn");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), inspectTurn + 1);
+        await page.evaluate(() => { delete $gamePlayer.updateAnimation; });
         await press("Escape");
         await press("ArrowDown"); await press("ArrowDown"); await press("Enter"); // Guard
         await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);

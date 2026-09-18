@@ -44,3 +44,5 @@ for goblins. Rendering crops only; source images are unchanged. The Monster
 face retains its original RPG Maker asset license.
 
 The current v2 large-head walking sprites, reference inputs, and full prompts are documented in [Overworld-sprites-v2.md](Overworld-sprites-v2.md). Earlier sheets are retained.
+
+The active v3 runtime sheets correct packing alignment and match NPC dimensions: [v3 packing provenance](Overworld-sprites-v3.md).

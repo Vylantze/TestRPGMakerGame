@@ -28,6 +28,11 @@ timeline; selecting a timeline actor highlights their map location. Directional
 skills can be rotated with arrows during targeting. Legacy-save migration is
 not supported.
 
+Holding a direction into a wall or solid object keeps Aren’s walking animation
+playing without advancing time or spending resources. Releasing the direction
+returns him to idle. Party walking frames are centered with aligned feet and
+are at least as wide and tall as the Guild Steward and Provisioner.
+
 ## Documentation
 
 - [Lore and game design](docs/GAME_DESIGN.md): original concept, characters,
@@ -38,7 +43,7 @@ not supported.
   text and clarification questions, with credentials redacted.
 - [Agent instructions](AGENTS.md): development, asset, logging, and Git policy.
 - [Art sources](Addons/FirstJourneyArt/ART_SOURCES.md) and
-  [walking-sprite provenance](Addons/FirstJourneyArt/Overworld-sprites-v2.md).
+  [walking-sprite provenance](Addons/FirstJourneyArt/Overworld-sprites-v3.md).
 
 ## Repository layout
 
@@ -94,6 +99,7 @@ node tools/test-first-journey-expedition.cjs
 
 # Real MZ browser playtest, including input, UI, targeting, and save/load.
 node tools/test-first-journey-engine.cjs
+node tools/test-first-journey-sprites.cjs
 
 # Check conversation filtering and credential redaction.
 node tools/test-conversation-log.cjs

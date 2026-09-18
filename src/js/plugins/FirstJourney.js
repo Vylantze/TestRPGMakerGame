@@ -17,7 +17,7 @@
     DataManager.setupNewGame = function() {
         existingSetup.call(this);
         $gameSystem._firstJourney = R.create();
-        $gamePlayer.setImage("$ArenJourney-v2", 0);
+        $gamePlayer.setImage("$ArenJourney-v3", 0);
         $gamePlayer.followers().hide();
     };
     // Use a dedicated save namespace; existing Project1 saves are untouched.
@@ -146,7 +146,11 @@
     Scene_Map.prototype.submitJourneyAction = function(action) {
         this.closeJourneyChoices(); this._journeyPreview = null; this._journeyCombatMove = false;
         const s = state(), unit = this.commandUnit();
-        if (!R.validAction(s, unit, action)) { R.log(s, "Cannot do that: check resources, range and line of sight."); return false; }
+        if (!R.validAction(s, unit, action)) {
+            if (action.type === "move" && unit.id === "aren") this.animateJourneyBlockedStep(action.dx, action.dy);
+            else R.log(s, "Cannot do that: check resources, range and line of sight.");
+            return false;
+        }
         if (this._journeyPendingAction) {
             const arenAction = this._journeyPendingAction; this._journeyPendingAction = null;
             R.submit(s, arenAction, action, true);

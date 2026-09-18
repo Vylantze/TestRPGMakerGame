@@ -20,6 +20,21 @@
         this.center(focus ? focus.x : Math.round(this._realX * 3) / 3, focus ? focus.y : Math.round(this._realY * 3) / 3);
     };
     const directions = { down: [0, 1], left: [-1, 0], right: [1, 0], up: [0, -1] };
+    const originalStepAnime = Game_Player.prototype.hasStepAnime;
+    Game_Player.prototype.hasStepAnime = function() {
+        const scene = SceneManager._scene, s = current();
+        const walking = s && s.aren.hp > 0 && scene instanceof Scene_Map && scene.isActive() &&
+            !s.round && !scene._journeyChoices && !scene._journeyDialogue && !scene._journeyTarget &&
+            !$gameMessage.isBusy() && !this.isTransferring() && (!s.combat || scene._journeyCombatMove);
+        const blocked = walking && scene._journeyBlockedWalkKey &&
+            (Input.isPressed(scene._journeyBlockedWalkKey) || Graphics.frameCount < scene._journeyBlockedWalkUntil);
+        if (scene && !blocked) scene._journeyBlockedWalkKey = null;
+        return originalStepAnime.call(this) || !!blocked;
+    };
+    Scene_Map.prototype.animateJourneyBlockedStep = function(dx, dy) {
+        this._journeyBlockedWalkKey = Object.keys(directions).find(key => directions[key][0] === dx && directions[key][1] === dy);
+        this._journeyBlockedWalkUntil = Graphics.frameCount + $gamePlayer.animationWait() + 1;
+    };
     function wrapped(bitmap, text, x, y, width, lineHeight = 29) {
         let line = "";
         for (const paragraph of text.split("\n")) {
@@ -340,12 +355,12 @@
         if (Input.isTriggered("cancel") || TouchInput.isCancelled()) {
             this._journeyCombatMove = false; b.clear(); this.combatMenu(); return true;
         }
-        const key = Object.keys(directions).find(name => Input.isTriggered(name));
+        const key = Object.keys(directions).find(name => Input.isRepeated(name));
         if (key) {
             const [dx, dy] = directions[key]; R.face(current(), dx, dy);
             if (R.validAction(current(), current().aren, { type: "move", dx, dy })) {
                 this._journeyCombatMove = false; b.clear(); this.submitJourneyAction({ type: "move", dx, dy });
-            } else { SoundManager.playBuzzer(); this.syncJourney(); }
+            } else { this.animateJourneyBlockedStep(dx, dy); if (Input.isTriggered(key)) SoundManager.playBuzzer(); this.syncJourney(); }
         }
         return true;
     };

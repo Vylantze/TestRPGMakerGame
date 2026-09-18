@@ -96,6 +96,11 @@ In combat with direct mode enabled, Aren remains the leader and Mira receives a 
 Aren action. If Aren falls, choose Wait to let Mira act; command her to revive
 him when available. If Mira falls, her command step is skipped.
 
+Holding a direction into a wall or solid object keeps Aren’s walking animation
+playing without advancing time or spending resources. Releasing the direction
+returns him to idle. Party walking frames are centered with aligned feet and
+are at least as wide and tall as the Guild Steward and Provisioner.
+
 ## Attack areas and entrances
 
 Sword Cut and Quick Jab only hit the tile immediately ahead. Arrow inputs
