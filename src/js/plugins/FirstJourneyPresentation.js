@@ -10,7 +10,7 @@
     "use strict";
     const R = FirstJourneyRules;
     const current = () => $gameSystem._firstJourney;
-    const portraits = { Aren: "ArenPortrait", Mira: "MiraPortrait", Steward: "VillagerMalePortrait", Provisioner: "VillagerFemalePortrait" };
+    const portraits = { Aren: "ArenPortrait-v3", Mira: "MiraPortrait", Steward: "VillagerMalePortrait", Provisioner: "VillagerFemalePortrait" };
     const position = unit => ({ x: $gameMap.adjustX(unit.x) * 48 + 24, y: $gameMap.adjustY(unit.y) * 48 + 20 });
     const directions = { down: [0, 1], left: [-1, 0], right: [1, 0], up: [0, -1] };
     function wrapped(bitmap, text, x, y, width, lineHeight = 29) {

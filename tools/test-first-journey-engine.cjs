@@ -3,7 +3,7 @@ const path = require("node:path");
 const http = require("node:http");
 const assert = require("node:assert/strict");
 const { chromium } = require("C:/Users/digi9/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
-const root = path.resolve(__dirname, "../Project1");
+const root = path.resolve(__dirname, "../src");
 const output = path.resolve(__dirname, "../Addons/FirstJourneyQA");
 const types = { ".html": "text/html", ".js": "text/javascript", ".json": "application/json", ".png": "image/png", ".ogg": "audio/ogg", ".woff": "font/woff", ".css": "text/css", ".wasm": "application/wasm" };
 const server = http.createServer((req, res) => {

@@ -1,5 +1,8 @@
 # Portrait sources and prompts
 
+Aren's current runtime portrait is `src/img/pictures/ArenPortrait-v3.png`.
+See [the longsword correction](Aren-longsword-edit.md) for the source and final edit prompt.
+
 All four portraits were generated with the built-in image generation tool for this project. No reference images were downloaded into the game. Final images are under `Project1/img/pictures/`: `ArenPortrait.png`, `MiraPortrait.png`, `VillagerMalePortrait.png`, and `VillagerFemalePortrait.png`.
 
 Mira's requested character-design reference is Elise Katharina von Hohenheim from *Hachi-nan tte, Sore wa Nai deshou!*. Reference identification: [Frontier Works official character announcement](https://www.fwinc.co.jp/news/56128/). These are generated game portraits, not official character art.
