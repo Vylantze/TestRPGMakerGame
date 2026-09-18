@@ -1,7 +1,7 @@
 # Portrait sources and prompts
 
-Aren's current runtime portrait is `src/img/pictures/ArenPortrait-v3.png`.
-See [the longsword correction](Aren-longsword-edit.md) for the source and final edit prompt.
+Aren's current runtime portrait is `src/img/pictures/ArenPortrait-v4.png`.
+See [the enlarged longsword correction](Aren-longsword-v4.md) for the source and final edit prompt.
 
 All four portraits were generated with the built-in image generation tool for this project. No reference images were downloaded into the game. Final images are under `Project1/img/pictures/`: `ArenPortrait.png`, `MiraPortrait.png`, `VillagerMalePortrait.png`, and `VillagerFemalePortrait.png`.
 
