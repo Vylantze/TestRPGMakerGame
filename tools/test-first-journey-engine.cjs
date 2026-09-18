@@ -22,13 +22,14 @@ const server = http.createServer((req, res) => {
         // Wait for sampled game frames, not wall time, so key taps cannot fall
         // entirely between software-rendered frames on slower test machines.
         async function press(key) {
-            await page.waitForFunction(() => !(SceneManager._scene instanceof Scene_Map) || (!$gamePlayer.isMoving() && !$gameMap.events().some(event => event.isMoving()) && !SceneManager._scene._journeyEffects?.length));
+            await page.waitForFunction(() => !(SceneManager._scene instanceof Scene_Map) || (!$gameSystem._firstJourney.round && !$gamePlayer.isMoving() && !$gameMap.events().some(event => event.isMoving()) && !SceneManager._scene._journeyEffects?.length));
             const before = await page.evaluate(() => Graphics.frameCount);
             await page.keyboard.down(key);
             await page.waitForFunction(frame => Graphics.frameCount >= frame + 3, before);
             await page.keyboard.up(key);
             const released = await page.evaluate(() => Graphics.frameCount);
             await page.waitForFunction(frame => Graphics.frameCount >= frame + 2, released);
+            await page.waitForFunction(() => !$gameSystem?._firstJourney?.round);
         }
         async function dismissDialogue() {
             for (let i = 0; i < 12 && await page.evaluate(() => !!SceneManager._scene._journeyDialogue); i++) {
@@ -82,10 +83,30 @@ const server = http.createServer((req, res) => {
         await press("Escape");
         await page.waitForFunction(() => SceneManager._scene instanceof Scene_Map && !!SceneManager._scene._journeyHud);
         await press("Tab");
-        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.controlled), "mira");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.direct), true);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.controlled), "aren");
+        const beforeDirect = await page.evaluate(() => $gameSystem._firstJourney.turn);
+        const beforeCancelResources = await page.evaluate(() => [$gameSystem._firstJourney.aren.sp, $gameSystem._firstJourney.aren.mp]);
+        await press("Space");
+        assert.ok(await page.evaluate(() => !!SceneManager._scene._journeyPendingAction));
+        await press("Escape");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), beforeDirect);
+        assert.deepEqual(await page.evaluate(() => [$gameSystem._firstJourney.aren.sp, $gameSystem._firstJourney.aren.mp]), beforeCancelResources);
+        await press("a");
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices.width), 296);
+        assert.ok(await page.evaluate(() => !!SceneManager._scene._journeyPreview));
+        await page.screenshot({ path: path.join(output, "skill-hover.png") });
+        await press("Enter"); await press("Enter");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), beforeDirect, "Aren waits for Mira's command");
+        assert.ok(await page.evaluate(() => !!SceneManager._scene._journeyPendingAction));
+        await page.screenshot({ path: path.join(output, "mira-command.png") });
+        await press("ArrowDown"); await press("ArrowDown"); await press("Enter");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), beforeDirect + 1);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.mira.guard), 4);
         await press("Tab");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.controlled), "aren");
         await page.screenshot({ path: path.join(output, "town.png") });
+        assert.deepEqual(await page.evaluate(() => [$gamePlayer.characterName(), $gameMap.event(1).characterName()]), ["$ArenJourney-v1", "$MiraJourney-v1"]);
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney;
             s.aren.x = 6; s.aren.y = 7; s.aren.direction = 4;
@@ -189,7 +210,7 @@ const server = http.createServer((req, res) => {
         await dismissDialogue();
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney;
-            s.aren.x = 17; s.aren.y = 6; s.aren.direction = 6;
+            s.aren.x = 16; s.aren.y = 6; s.aren.direction = 6;
             s.mira.x = 15; s.mira.y = 6;
             SceneManager._scene.syncJourney();
         });
@@ -198,6 +219,7 @@ const server = http.createServer((req, res) => {
         await page.keyboard.down("ArrowLeft");
         await page.waitForFunction(turn => $gameSystem._firstJourney.turn > turn, turnBeforeHold);
         await page.keyboard.up("ArrowLeft");
+        await page.waitForFunction(() => !$gameSystem._firstJourney.round && !$gamePlayer.isMoving());
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.direction), 4, "Holding a new direction turns and walks through Mira");
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney;
@@ -209,7 +231,7 @@ const server = http.createServer((req, res) => {
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.mapId), 2, "Walking into the doorway transfers without interaction");
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney, R = FirstJourneyRules;
-            s.controlled = "mira"; s.mira.level = 2; s.mira.mp = 29;
+            s.controlled = "aren"; SceneManager._scene._journeyPendingAction = { type: "wait" }; s.mira.level = 2; s.mira.mp = 29;
             s.mira.x = 8; s.mira.y = 7; s.aren.x = 7; s.aren.y = 7;
             R.area(s).enemies = R.area(s).enemies.slice(0, 2);
             Object.assign(R.area(s).enemies[0], { x: 9, y: 8, hp: 10 });
@@ -229,9 +251,30 @@ const server = http.createServer((req, res) => {
         assert.deepEqual(await page.evaluate(() => FirstJourneyRules.party($gameSystem._firstJourney).map(u => u.hp)), partyHp, "Burst spares the party");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.mira.mp), 24);
         assert.equal(await page.evaluate(() => FirstJourneyRules.area($gameSystem._firstJourney).enemies.every(enemy => enemy.hp === 0)), true);
+        // Track the real camera offsets during an animated step.
+        await page.evaluate(() => {
+            const s = $gameSystem._firstJourney;
+            FirstJourneyRules.area(s).enemies = []; s.combat = false; s.direct = false;
+            s.aren.x = 8; s.aren.y = 7; s.aren.direction = 6; s.mira.x = 7; s.mira.y = 7;
+            SceneManager._scene.syncJourney();
+        });
+        await page.waitForFunction(() => !$gamePlayer.isMoving());
+        await page.evaluate(() => {
+            window.cameraOffsets = [];
+            const original = $gamePlayer.updateScroll;
+            $gamePlayer.updateScroll = function(...args) { original.apply(this, args); cameraOffsets.push($gameMap.displayX()); };
+        });
+        await press("ArrowRight");
+        const offsets = await page.evaluate(() => [...new Set(cameraOffsets)]);
+        assert.ok(offsets.some(x => Math.abs(x - Math.floor(x) - 1 / 3) < 0.001), "Camera visits one-third tile offset");
+        assert.ok(offsets.some(x => Math.abs(x - Math.floor(x) - 2 / 3) < 0.001), "Camera visits two-thirds tile offset");
+        await press("Escape");
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices.width), 280);
+        await page.screenshot({ path: path.join(output, "field-menu.png") });
+        await press("Escape");
         await page.waitForTimeout(300);
         assert.deepEqual(errors, []);
-        console.log("PASS MZ boot, new game, movement, all menus, control switching, transfer, skill targeting, combat checkpoint, engine save/load, defeat return, rest, shopping and ending; no console errors.");
+        console.log("PASS MZ boot, new game, movement, all menus, direct companion commands, skill hover, transfer, skill targeting, combat checkpoint, engine save/load, defeat return, rest, shopping and ending; no console errors.");
     } catch (error) {
         console.error(errors);
         if (page) {

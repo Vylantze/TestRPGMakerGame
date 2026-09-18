@@ -12,6 +12,12 @@
     const current = () => $gameSystem._firstJourney;
     const portraits = { Aren: "ArenPortrait-v4", Mira: "MiraPortrait", Steward: "VillagerMalePortrait", Provisioner: "VillagerFemalePortrait" };
     const position = unit => ({ x: $gameMap.adjustX(unit.x) * 48 + 24, y: $gameMap.adjustY(unit.y) * 48 + 20 });
+    const originalScroll = Game_Player.prototype.updateScroll;
+    Game_Player.prototype.updateScroll = function(x, y) {
+        if (!current()) return originalScroll.call(this, x, y);
+        // Follow animation position in thirds of a tile (16 px), rather than snapping to destinations.
+        this.center(Math.round(this._realX * 3) / 3, Math.round(this._realY * 3) / 3);
+    };
     const directions = { down: [0, 1], left: [-1, 0], right: [1, 0], up: [0, -1] };
     function wrapped(bitmap, text, x, y, width, lineHeight = 29) {
         let line = "";
@@ -61,22 +67,22 @@
             this._journeyNextStep = Graphics.frameCount + 12;
             const unit = current()[current().controlled];
             const facing = R.directions[unit.direction || 2];
-            if (facing[0] === dx && facing[1] === dy) R.move(current(), dx, dy);
+            if (facing[0] === dx && facing[1] === dy) this.submitJourneyAction({ type: "move", dx, dy });
             R.face(current(), dx, dy); this.syncJourney();
             return;
         }
         R.face(current(), dx, dy); this.syncJourney();
         if (Graphics.frameCount >= this._journeyNextStep) {
-            R.move(current(), dx, dy); this.syncJourney();
+            this.submitJourneyAction({ type: "move", dx, dy }); this.syncJourney();
             this._journeyNextStep = Graphics.frameCount + 9;
         }
     };
     Scene_Map.prototype.beginJourneyTargeting = function(id) {
-        this.closeJourneyChoices(); this.ensureJourneyPresentation();
-        const s = current(), unit = s[s.controlled], skill = R.skills[id];
+        this.closeJourneyChoices(); this._journeyPreview = null; this.ensureJourneyPresentation();
+        const s = current(), unit = this.commandUnit(), skill = R.skills[id];
         const valid = R.targetOptions(s, unit, id);
         if (!valid.length) { R.log(s, "No valid targets for " + skill.name + ". No resources spent."); this.skillMenu(); return; }
-        const enemy = skill.kind === "damage" ? R.enemies(s).find(target => R.canTarget(s, unit, id, target)) : unit;
+        const enemy = R.offensive(id) ? R.enemies(s).find(target => R.canTarget(s, unit, id, target)) : R.party(s).filter(target => R.canTarget(s, unit, id, target)).sort((a, b) => a.hp / R.maxStats(a).hp - b.hp / R.maxStats(b).hp)[0] || unit;
         this._journeyTarget = { id, targets: valid, index: Math.max(0, valid.findIndex(tile => enemy && tile.x === enemy.x && tile.y === enemy.y)) };
         Input.update();
     };
@@ -106,12 +112,17 @@
         const target = selection.targets[selection.index];
         if (confirm) {
             this._journeyTarget = null; bitmap.clear();
-            this.act(() => R.cast(current(), selection.id, target)); Input.update(); return true;
+            this.submitJourneyAction({ type: "skill", id: selection.id, target: { x: target.x, y: target.y } }); Input.update(); return true;
         }
+        this.drawJourneyTarget(selection, false);
+        return true;
+    };
+    Scene_Map.prototype.drawJourneyTarget = function(selection, preview) {
+        const bitmap = this._journeyOverlay.bitmap, target = selection.targets[selection.index];
         bitmap.clear();
         const context = bitmap.context;
         const s = current();
-        for (const tile of R.footprint(s, s[s.controlled], selection.id, target)) {
+        for (const tile of R.footprint(s, this.commandUnit(), selection.id, target)) {
             const p = position(tile);
             bitmap.fillRect(p.x - 24, p.y - 20, 48, 48, "rgba(255,177,65,0.38)");
         }
@@ -125,11 +136,17 @@
                 context.moveTo(p.x - 8, p.y - 42); context.lineTo(p.x + 8, p.y - 42); context.lineTo(p.x, p.y - 32); context.fill();
             }
         });
-        bitmap.fillRect(8, Graphics.height - 104, Graphics.width - 16, 96, "#111f31");
+        bitmap.fillRect(8, Graphics.height - 124, Graphics.width - 16, 116, "#111f31");
         bitmap.fontSize = 22; bitmap.textColor = "#ffdc91";
-        bitmap.drawText(R.skills[selection.id].name + " [" + R.targetRule(selection.id) + "] → " + target.name, 24, Graphics.height - 98, Graphics.width - 48, 32);
-        bitmap.fontSize = 17; bitmap.textColor = "#ffffff";
-        bitmap.drawText((selection.targets.length > 1 ? "Arrows: aim on ground    " : "Facing determines hitbox    ") + "Enter: use skill    Esc: back", 24, Graphics.height - 58, Graphics.width - 48, 30);
+        bitmap.drawText(R.skills[selection.id].name + " [" + R.targetRule(selection.id) + "] → " + target.name, 24, Graphics.height - 120, Graphics.width - 48, 32);
+        bitmap.fontSize = 15; bitmap.textColor = "#d3dfeb";
+        const skill = R.skills[selection.id], unit = this.commandUnit();
+        const power = Math.round((skill.power + (unit.level - 1) * 2) * (unit.id === "aren" && !skill.basic ? 0.6 + R.mastery(s, selection.id) * 0.2 : 1));
+        const speedPower = Math.sign(skill.power) * Math.max(1, Math.round(Math.abs(skill.power) * (unit.id === "aren" ? 0.6 + R.mastery(s, selection.id) * 0.2 : 1)));
+        const detail = skill.kind === "speed" ? "Speed " + (skill.power > 0 ? "+" : "") + speedPower + " for " + skill.duration + " rounds" : skill.kind === "guard" ? "Reduce the next hit" : (skill.kind === "damage" ? "Damage " : "Restore HP ") + power;
+        bitmap.drawText(unit.name + " • " + skill.cost + " " + skill.pool.toUpperCase() + " • Range " + skill.range + " • " + detail, 24, Graphics.height - 87, Graphics.width - 48, 26);
+        bitmap.fontSize = 15; bitmap.textColor = "#ffffff";
+        bitmap.drawText((preview ? "Select skill to aim    " : selection.targets.length > 1 ? "Arrows: aim on ground    " : "Facing determines hitbox    ") + "Enter: use skill    Esc: back", 24, Graphics.height - 58, Graphics.width - 48, 30);
         bitmap.baseTexture.update();
         return true;
     };
@@ -269,16 +286,30 @@
         originalInteract.call(this);
     };
     Scene_Map.prototype.partyMenu = function() {
-        this.choices(R.party(current()).map(unit => ({ label: unit.name + "   Lv." + unit.level + "   " + (unit.id === "aren" ? "Skill learner" : "Priestess") + "   HP " + unit.hp + "/" + R.maxStats(unit).hp,
+        this.choices(R.party(current()).map(unit => ({ label: unit.name + "   Lv." + unit.level + "   " + (unit.id === "aren" ? "Skill learner" : "Priestess") + "   SPD " + R.speed(unit) + "   HP " + unit.hp + "/" + R.maxStats(unit).hp,
             run: () => {
                 const max = R.maxStats(unit), skills = R.availableSkills(current(), unit);
-                this.conversation([unit.name], [{ speaker: unit.name, text: "Level " + unit.level + "  •  EXP " + unit.xp + "/" + unit.level * 16 + "\nHP " + unit.hp + "/" + max.hp + "   SP " + unit.sp + "/" + max.sp + "   MP " + unit.mp + "/" + max.mp + "\nSkills: " + skills.map(id => R.skills[id].name).join(", ") }], () => this.partyMenu());
+                this.conversation([unit.name], [{ speaker: unit.name, text: "Level " + unit.level + "  •  Speed " + R.speed(unit) + "  •  EXP " + unit.xp + "/" + unit.level * 16 + "\nHP " + unit.hp + "/" + max.hp + "   SP " + unit.sp + "/" + max.sp + "   MP " + unit.mp + "/" + max.mp + "\nSkills: " + skills.map(id => R.skills[id].name).join(", ") }], () => this.partyMenu());
             } })), () => this.fieldMenu());
+    };
+    Scene_Map.prototype.updateJourneySkillPreview = function() {
+        const win = this._journeyChoices, id = win?._entries[win.index()]?.skillId;
+        if (!id) {
+            if (this._journeyPreview) { this._journeyPreview = null; this._journeyOverlay.bitmap.clear(); }
+            return false;
+        }
+        const s = current(), unit = this.commandUnit(), targets = R.targetOptions(s, unit, id);
+        if (!targets.length) { this._journeyOverlay.bitmap.clear(); return false; }
+        const candidate = R.offensive(id) ? R.enemies(s).find(u => R.canTarget(s, unit, id, u)) : R.party(s).filter(u => R.canTarget(s, unit, id, u)).sort((a,b) => a.hp / R.maxStats(a).hp - b.hp / R.maxStats(b).hp)[0];
+        this._journeyPreview = { id, targets, index: Math.max(0, targets.findIndex(p => candidate && p.x === candidate.x && p.y === candidate.y)) };
+        this.drawJourneyTarget(this._journeyPreview, true);
+        return false;
     };
     Scene_Map.prototype.updateJourneyPresentation = function() {
         this.ensureJourneyPresentation();
         if (this._journeyDialogue) return this.updateJourneyDialogue();
         if (this._journeyTarget) return this.updateJourneyTargeting();
-        return this.updateJourneyEffects();
+        if (this.updateJourneyEffects()) return true;
+        return this.updateJourneySkillPreview();
     };
 })();

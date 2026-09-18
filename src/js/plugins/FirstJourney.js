@@ -17,7 +17,7 @@
     DataManager.setupNewGame = function() {
         existingSetup.call(this);
         $gameSystem._firstJourney = R.create();
-        $gamePlayer.setImage("Actor1", 0);
+        $gamePlayer.setImage("$ArenJourney-v1", 0);
         $gamePlayer.followers().hide();
     };
     // Use a dedicated save namespace; existing Project1 saves are untouched.
@@ -101,7 +101,7 @@
             this.say([
                 "Aren: Father taught me the sword. Mother taught me magic.\nNow it is time to discover what I can make of both.",
                 "Mira: And I am coming with you. Our first guild test is\nonly a goblin nest in the old shrine. We can handle that.",
-                "Tap to turn or step forward; hold to walk. Moving advances time.\nA: skills  •  Tab: control Aren/Mira  •  Space: wait\nEnter: interact with what you face  •  Esc: menu"
+                "Tap to turn or step forward; hold to walk. Moving advances time.\nA: skills  •  Tab: Mira commands  •  Space: wait\nEnter: interact with what you face  •  Esc: menu"
             ]);
             save("journey-start");
         }
@@ -116,8 +116,7 @@
         syncUnit($gamePlayer, s.aren);
         syncUnit($gameMap.event(1), s.mira);
         R.area(s).enemies.forEach((unit, index) => syncUnit($gameMap.event(10 + index), unit));
-        const active = s[s.controlled];
-        $gamePlayer.center(active.x, active.y);
+
     };
     Scene_Map.prototype.closeJourneyChoices = function() {
         if (this._journeyChoices) {
@@ -126,28 +125,49 @@
             this._journeyChoices = null;
         }
     };
-    Scene_Map.prototype.choices = function(entries, cancel) {
+    Scene_Map.prototype.choices = function(entries, cancel, width = 360) {
         this.closeJourneyChoices();
+        this._journeyPreview = null;
         const height = Math.min(460, entries.length * 36 + 24);
-        const win = new JourneyChoices(new Rectangle(36, Math.round((Graphics.boxHeight - height) / 2), Graphics.boxWidth - 72, height), entries);
+        const win = new JourneyChoices(new Rectangle(Graphics.boxWidth - width - 16, 24, width, height), entries);
         win.setHandler("cancel", () => { this.closeJourneyChoices(); if (cancel) cancel(); });
         this._journeyChoices = win;
         this.addWindow(win);
-        win.activate(); win.select(0);
+        win.backOpacity = 245; win.activate(); win.select(0);
     };
     Scene_Map.prototype.act = function(callback) {
         this.closeJourneyChoices();
         if (callback() === false) R.log(state(), "Cannot do that: check resources, range and line of sight.");
         this.syncJourney();
     };
+    Scene_Map.prototype.commandUnit = function() { return this._journeyPendingAction ? state().mira : state().aren; };
+    Scene_Map.prototype.submitJourneyAction = function(action) {
+        this.closeJourneyChoices(); this._journeyPreview = null;
+        const s = state(), unit = this.commandUnit();
+        if (!R.validAction(s, unit, action)) { R.log(s, "Cannot do that: check resources, range and line of sight."); return false; }
+        if (this._journeyPendingAction) {
+            const arenAction = this._journeyPendingAction; this._journeyPendingAction = null;
+            R.submit(s, arenAction, action, true);
+        } else if (s.direct && s.mira.hp > 0) {
+            this._journeyPendingAction = action; this.miraCommandMenu();
+        } else R.submit(s, action, null, true);
+        this.syncJourney(); return true;
+    };
+    Scene_Map.prototype.miraCommandMenu = function() {
+        this.choices([
+            { label: "Mira — choose action", enabled: false },
+            { label: "Skills", run: () => this.skillMenu() },
+            { label: "Guard", run: () => this.submitJourneyAction({ type: "guard" }) },
+            { label: "Follow Aren", run: () => this.submitJourneyAction({ type: "follow", target: { x: state().aren.x, y: state().aren.y } }) },
+            { label: "Wait", run: () => this.submitJourneyAction({ type: "wait" }) },
+            { label: "Cancel round", run: () => { this._journeyPendingAction = null; this.closeJourneyChoices(); } }
+        ], () => { this._journeyPendingAction = null; });
+    };
     Scene_Map.prototype.skillMenu = function() {
-        const s = state(), unit = s[s.controlled];
-        const ids = R.availableSkills(s, unit);
-        this.choices(ids.map(id => {
-            const skill = R.skills[id];
-            return { label: skill.name + "   " + skill.cost + " " + skill.pool.toUpperCase() + "   " + (skill.shape === "front" ? "Front tile" : skill.shape === "line" ? skill.range + " tiles forward" : skill.shape === "arc" ? "3 across in front" : skill.shape === "around" ? "8 surrounding tiles" : skill.shape === "burst" ? "Range 4 / radius 1" : "Range " + skill.range), enabled: unit[skill.pool] >= skill.cost,
-                run: () => this.beginJourneyTargeting(id) };
-        }));
+        const s = state(), unit = this.commandUnit(), ids = R.availableSkills(s, unit);
+        this.choices(ids.map(id => ({ label: R.skills[id].name + "  " + R.skills[id].cost + " " + R.skills[id].pool.toUpperCase(),
+            skillId: id, enabled: unit.hp > 0 && unit[R.skills[id].pool] >= R.skills[id].cost, run: () => this.beginJourneyTargeting(id)
+        })), () => { this._journeyPreview = null; this._journeyOverlay?.bitmap.clear(); if (this._journeyPendingAction) this.miraCommandMenu(); }, 296);
     };
     Scene_Map.prototype.journal = function() {
         const s = state();
@@ -158,17 +178,17 @@
             entries.push({ label: (s.equipped.includes(id) ? "[E] " : "      ") + skill.name + "  |  " + text, enabled: !s.combat && !!k?.learned, run: () => { if (!R.equip(s, id)) R.log(s, "No free skill slots. Unequip another skill first."); this.journal(); } });
             if (skill.prerequisite && !R.ready(s, id)) entries.push({ label: "       Requires " + R.skills[skill.prerequisite].name + " at 100% mastery; locked observations +5 units", enabled: false });
         }
-        this.choices(entries);
+        this.choices(entries, null, 680);
     };
     Scene_Map.prototype.behavior = function() {
         const s = state();
         const modes = { Support: "heal, then attack if MP permits", Attack: "prioritize Light Lance", Guard: "hold position; heal and reduce damage", Follow: "follow without spending resources", Conserve: "heal when needed; no offensive spells" };
-        this.choices(Object.entries(modes).map(([mode, description]) => ({ label: (s.mode === mode ? "[x] " : "[ ] ") + mode + " — " + description, run: () => { s.mode = mode; this.closeJourneyChoices(); R.log(s, "Mira behavior: " + mode + ". Tab returns to direct control."); } })));
+        this.choices(Object.entries(modes).map(([mode, description]) => ({ label: (s.mode === mode ? "[x] " : "[ ] ") + mode + " — " + description, run: () => { s.mode = mode; s.direct = false; this.closeJourneyChoices(); R.log(s, "Mira behavior: " + mode + "."); } })));
     };
     Scene_Map.prototype.items = function() {
         const s = state();
         this.choices(["hp", "sp", "mp"].map(type => ({ label: type.toUpperCase() + " potion ×" + s.inventory[type] + "  (restores " + (type === "hp" ? 25 : 12) + ")", enabled: s.inventory[type] > 0,
-            run: () => this.choices(R.party(s).map(unit => ({ label: unit.name + " " + unit[type] + "/" + R.maxStats(unit)[type], enabled: unit.hp > 0 && unit[type] < R.maxStats(unit)[type], run: () => this.act(() => R.potion(s, type, unit)) })), () => this.items()) })));
+            run: () => this.choices(R.party(s).map(unit => ({ label: unit.name + " " + unit[type] + "/" + R.maxStats(unit)[type], enabled: unit.hp > 0 && unit[type] < R.maxStats(unit)[type], run: () => this.submitJourneyAction({ type: "potion", pool: type, targetId: unit.id }) })), () => this.items()) })));
     };
     Scene_Map.prototype.shop = function() {
         const s = state();
@@ -180,27 +200,24 @@
             { label: "Party", run: () => this.partyMenu() },
             { label: "Options", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Options); } },
             { label: "Skills / attack [A]", run: () => this.skillMenu() },
-            { label: "Skill journal and loadout [K]", run: () => this.journal() },
+            { label: "Skill journal [K]", run: () => this.journal() },
             { label: "Potions [I]", run: () => this.items() },
-            { label: "Mira's automatic behavior [C]", run: () => this.behavior() },
-            { label: "Switch direct control [Tab]", run: () => { this.closeJourneyChoices(); this.switchControl(); } },
-            { label: "Save expedition (manual slot 1)", run: () => { this.closeJourneyChoices(); save("manual", 1); } },
-            { label: "Load saved expedition", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Load); } },
+            { label: "Mira behavior [C]", run: () => this.behavior() },
+            { label: "Mira: " + (state().direct ? "Direct" : "Auto") + " [Tab]", run: () => { this.closeJourneyChoices(); this.toggleMiraCommands(); } },
+            { label: "Save", run: () => { this.closeJourneyChoices(); save("manual", 1); } },
+            { label: "Load", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Load); } },
             { label: "Controls and rules", run: () => { this.closeJourneyChoices(); this.say([
-                "Tap to turn or step forward; hold to walk. Space: wait. A: skills.\nChoose a skill, aim its hitbox, then confirm. Empty casts work.\nTab: control • C: behavior • K: journal • I: potions",
+                "Tap to turn or step forward; hold to walk. Space: wait. A: skills.\nChoose a skill, aim its hitbox, then confirm. Empty casts work.\nTab: Mira commands • C: behavior • K: journal • I: potions",
                 "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Sword Cut costs SP; Ember costs MP.",
                 "Witness a basic skill 3 times to copy its form at 60% power.\nPractice raises it at 6/12/18 points to 80/100/120%.\nDebug units: watching +25; using +100.",
                 "Advanced skills need their prerequisite at 100% mastery.\nUntil then each observation adds 5/300 learning units.\nLoadouts change outside combat; starting attacks use no slots.",
-                "Enemy actions happen after yours and your companion's.\nDowned allies need rest or Revive. If both fall, you return\nto town with progression retained. Use map exits to retreat."
+                "All actions resolve in descending Speed order.\nDowned allies need rest or Revive. If both fall, you return\nto town with progression retained. Use map exits to retreat."
             ]); } }
-        ]);
+        ], null, 280);
     };
-    Scene_Map.prototype.switchControl = function() {
-        const s = state(), next = s.controlled === "aren" ? "mira" : "aren";
-        if (s[next].hp <= 0) { R.log(s, s[next].name + " is down and cannot act."); return; }
-        s.controlled = next;
-        R.log(s, "Direct control: " + s[next].name + ". The other companion acts automatically.");
-        this.syncJourney();
+    Scene_Map.prototype.toggleMiraCommands = function() {
+        state().direct = !state().direct;
+        R.log(state(), "Mira: " + (state().direct ? "direct commands after Aren's action." : "automatic " + state().mode + "."));
     };
     Scene_Map.prototype.interactJourney = function() {
         const s = state(), result = R.interact(s);
@@ -217,22 +234,33 @@
     };
     Scene_Map.prototype.drawJourney = function() {
         const b = this._journeyHud.bitmap, s = state();
-        const key = JSON.stringify([s.turn, s.mapId, s.controlled, s.mode, s.quest, s.gold, s.inventory, s.log, s.aren.hp, s.mira.hp, s.aren.sp, s.aren.mp, s.mira.sp, s.mira.mp, $gameMap.displayX(), $gameMap.displayY(), saveStatus]);
+        const key = JSON.stringify([!!this._journeyChoices, s.turn, s.mapId, s.direct, s.round?.index, R.speed(s.aren), R.speed(s.mira), s.mode, s.quest, s.gold, s.inventory, s.log, s.aren.hp, s.mira.hp, s.aren.sp, s.aren.mp, s.mira.sp, s.mira.mp, $gameMap.displayX(), $gameMap.displayY(), saveStatus]);
         if (this._journeyHudKey === key) return;
         this._journeyHudKey = key;
         b.clear(); b.fontFace = $gameSystem.mainFontFace(); b.fontSize = 17;
-        b.fillRect(0, 0, Graphics.width, 112, "rgba(12,20,32,0.94)");
         b.fillRect(0, Graphics.height - 108, Graphics.width, 108, "rgba(12,20,32,0.94)");
         const text = (value, x, y, width = 760, color = "#edf1ea") => { b.textColor = color; b.drawText(value, x, y, width, 24); };
-        text(R.maps[s.mapId].name, 18, 5, 550, "#f0d79b");
-        text((s.combat ? "COMBAT" : "EXPLORING") + " • Turn " + s.turn, Graphics.width - 220, 5, 205, s.combat ? "#ffa38c" : "#9ad8b2");
         R.party(s).forEach((unit, index) => {
-            const max = R.maxStats(unit), x = 18 + index * 390;
-            text((s.controlled === unit.id ? "▶ " : "  ") + unit.name + "  Lv." + unit.level + (unit.hp <= 0 ? "  DOWN" : ""), x, 32, 370);
-            text("HP " + unit.hp + "/" + max.hp + "   SP " + unit.sp + "/" + max.sp + "   MP " + unit.mp + "/" + max.mp, x, 55, 375);
+            const max = R.maxStats(unit), x = 12, y = 12 + index * 116;
+            b.fillRect(x, y, 220, 108, "rgba(12,20,32,0.9)");
+            b.fontSize = 16;
+            text(unit.name + "  Lv." + unit.level + "  SPD " + R.speed(unit) + (unit.hp <= 0 ? "  DOWN" : ""), x + 10, y + 3, 204);
+            [["hp", "#d94c55"], ["sp", "#48bd76"], ["mp", "#478ce0"]].forEach(([pool, color], row) => {
+                const yy = y + 32 + row * 23;
+                b.fillRect(x + 10, yy, 200, 18, "#233044");
+                b.fillRect(x + 10, yy, Math.round(200 * Math.max(0, Math.min(1, unit[pool] / max[pool]))), 18, color);
+                b.fontSize = 13; text(pool.toUpperCase() + "  " + unit[pool] + " / " + max[pool], x + 18, yy - 3, 185);
+            });
         });
-        b.fontSize = 14;
-        text("Rations " + s.inventory.ration + "   Gold " + s.gold + "   Mira: " + s.mode + "   |   " + (s.quest === "return" ? "Return to the guild" : s.quest === "complete" ? "First test complete" : "Clear the shrine's goblin nest"), 18, 83);
+        if (!this._journeyChoices) {
+            b.fillRect(Graphics.width - 320, 12, 308, 108, "rgba(12,20,32,0.9)");
+            b.fontSize = 15;
+            text(R.maps[s.mapId].name, Graphics.width - 310, 15, 290, "#f0d79b");
+            text((s.round ? "RESOLVING" : s.combat ? "COMBAT" : "EXPLORING") + " • Round " + s.turn + " • Mira " + (s.direct ? "Direct" : "Auto"), Graphics.width - 310, 40, 290);
+            b.fontSize = 13;
+            text("Rations " + s.inventory.ration + "   Gold " + s.gold + "   " + saveStatus, Graphics.width - 310, 65, 290, "#a9c1cf");
+            text(s.quest === "return" ? "Return to the guild" : s.quest === "complete" ? "First test complete" : "Clear the goblin nest", Graphics.width - 310, 88, 290, "#f0d79b");
+        }
         // Location labels remain attached to their map coordinates while scrolling.
         const map = R.maps[s.mapId];
         const markers = [...(map.debugStatue ? [{ p: map.debugStatue, label: "GOD MODE " + (s.godMode ? "ON" : "OFF"), color: "#c6a5ff" }] : []), { p: map.rest, label: s.mapId === 1 ? "FREE REST" : "CAMP • 1 RATION", color: "#ffe2a4" }, ...[map.exit, map.back].filter(Boolean).map(p => ({ p, label: "PASSAGE", color: "#a6e4ef" })), ...(map.npcs || []).map(npc => ({ p: [npc.x, npc.y], label: npc.name, color: "#fff1c9" })), ...(map.caches || []).filter((_, i) => !R.area(s).caches.includes(i)).map(p => ({ p, label: "SUPPLIES", color: "#b5dfab" }))];
@@ -247,8 +275,8 @@
         const bottom = Graphics.height - 105;
         s.log.slice(-3).forEach((line, index) => text(line, 18, bottom + index * 23, Graphics.width - 36));
         b.fontSize = 13;
-        text("Tap: turn/step / Hold: walk   A skills   Tab control   Enter talk   Space wait   Esc menu", 18, Graphics.height - 30, 680, "#a9c1cf");
-        text(saveStatus, Graphics.width - 215, 83, 205, "#a9c1cf");
+        text("Tap: turn/step / Hold: walk   A skills   Tab commands   Enter talk   Space wait   Esc menu", 18, Graphics.height - 30, 680, "#a9c1cf");
+
     };
     const oldUpdate = Scene_Map.prototype.update;
     Scene_Map.prototype.update = function() {
@@ -257,16 +285,20 @@
         if (!state() || !this._journeyHud) return;
         this.drawJourney();
         if (this.updateJourneyPresentation && this.updateJourneyPresentation()) return;
+        if (state().round) {
+            if (Graphics.frameCount >= (this._journeyActionUntil || 0) && !$gamePlayer.isMoving() && !$gameMap.events().some(event => event.isMoving())) { R.advance(state()); this._journeyActionUntil = Graphics.frameCount + 12; this.syncJourney(); }
+            return;
+        }
         if (hadChoices || this._journeyChoices || $gameMessage.isBusy() || $gamePlayer.isTransferring() || !this.isActive() || SceneManager.isSceneChanging()) return;
         if ($gamePlayer.isMoving() || $gameMap.events().some(event => event.isMoving())) return;
         if (Input.isTriggered("journeySkills")) this.skillMenu();
         else if (Input.isTriggered("journeyBehavior")) this.behavior();
         else if (Input.isTriggered("journeyJournal")) this.journal();
         else if (Input.isTriggered("journeyItems")) this.items();
-        else if (Input.isTriggered("journeyControl")) this.switchControl();
+        else if (Input.isTriggered("journeyControl")) this.toggleMiraCommands();
         else if (Input.isTriggered("cancel") || TouchInput.isCancelled()) this.fieldMenu();
         else if (Input.isTriggered("ok")) this.interactJourney();
-        else if (Input.isTriggered("journeyWait")) this.act(() => R.finishTurn(state()));
+        else if (Input.isTriggered("journeyWait")) this.submitJourneyAction({ type: "wait" });
         else {
             this.updateJourneyWalking();
         }

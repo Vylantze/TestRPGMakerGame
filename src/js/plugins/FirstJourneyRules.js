@@ -7,6 +7,9 @@
 (() => {
     "use strict";
     const skills = {
+        haste: { name: "Haste", pool: "mp", cost: 3, power: 4, range: 4, kind: "speed", duration: 3 },
+        slow: { name: "Slow", pool: "mp", cost: 3, power: -4, range: 4, kind: "speed", duration: 3 },
+        quickening: { name: "Quickening Chorus", pool: "mp", cost: 6, power: 3, range: 4, shape: "burst", kind: "speed", duration: 3, prerequisite: "haste" },
         cut: { name: "Sword Cut", pool: "sp", cost: 1, power: 7, range: 1, shape: "front", kind: "damage", basic: true },
         spark: { name: "Ember", pool: "mp", cost: 1, power: 6, range: 4, kind: "damage", basic: true },
         mend: { name: "Mend", pool: "mp", cost: 3, power: 15, range: 4, kind: "heal" },
@@ -22,6 +25,7 @@
     };
     // Shared job tables apply to companions and humanoid enemies.
     const jobs = {
+        supporter: [{ level: 1, skill: "spark" }, { level: 1, skill: "haste" }, { level: 1, skill: "slow" }, { level: 3, skill: "quickening" }],
         priestess: [{ level: 1, skill: "mend" }, { level: 1, skill: "light" }, { level: 2, skill: "burst" }, { level: 3, skill: "greaterMend" }, { level: 5, skill: "revive" }],
         fighter: [{ level: 1, skill: "jab" }, { level: 2, skill: "brace" }, { level: 2, skill: "thrust" }, { level: 3, skill: "sweep" }, { level: 3, skill: "whirlwind" }]
     };
@@ -38,7 +42,7 @@
             "#.........#...........#", "#.....................#", "#.........#...........#", "#.........#...........#", "#######################"
         ], rest: [12, 9], exit: [22, 3, 3, 2, 7], back: [0, 9, 1, 16, 6], caches: [[4, 3], [19, 13]], enemies: [
             { x: 7, y: 8, name: "Goblin lookout", job: "fighter", level: 1, hp: 22 },
-            { x: 6, y: 3, name: "Goblin forager", job: "fighter", level: 1, hp: 24 },
+            { x: 6, y: 3, name: "Goblin chanter", job: "supporter", level: 1, hp: 24 },
             { x: 17, y: 7, name: "Goblin sentry", job: "fighter", level: 2, hp: 29 },
             { x: 18, y: 3, name: "Goblin lookout", job: "fighter", level: 1, hp: 24 }
         ] },
@@ -60,18 +64,18 @@
     const maxStats = actor => ({ hp: (actor.id === "aren" ? 44 : 36) + (actor.level - 1) * 6, sp: 22 + (actor.level - 1) * 2, mp: (actor.id === "aren" ? 18 : 26) + (actor.level - 1) * 3 });
     const jobSkills = actor => (jobs[actor.job] || []).filter(entry => entry.level <= actor.level).map(entry => entry.skill);
     function actor(id, x, y) {
-        const unit = { id, name: id === "aren" ? "Aren" : "Mira", job: id === "aren" ? "mimic" : "priestess", level: 1, xp: 0, x, y, direction: 2, guard: 0 };
+        const unit = { id, name: id === "aren" ? "Aren" : "Mira", job: id === "aren" ? "mimic" : "priestess", level: 1, xp: 0, x, y, direction: 2, guard: 0, speed: id === "aren" ? 10 : 8, speedEffect: null };
         Object.assign(unit, maxStats(unit));
         return unit;
     }
     function create() {
-        return { version: 1, mapId: 1, aren: actor("aren", 8, 7), mira: actor("mira", 7, 7), controlled: "aren", mode: "Support", turn: 0, combat: false,
+        return { version: 1, mapId: 1, aren: actor("aren", 8, 7), mira: actor("mira", 7, 7), controlled: "aren", direct: false, round: null, mode: "Support", turn: 0, combat: false,
             knowledge: {}, equipped: [], inventory: { ration: 3, hp: 2, sp: 1, mp: 1 }, shopStock: { hp: 2, sp: 1, mp: 1 }, gold: 30, areas: {}, log: [], checkpoints: [], quest: "journey", defeated: 0 };
     }
     function log(state, text) { state.log.push(text); state.log = state.log.slice(-40); }
     function area(state) {
         if (!state.areas[state.mapId]) {
-            state.areas[state.mapId] = { caches: [], enemies: maps[state.mapId].enemies.map((enemy, index) => ({ ...enemy, id: "enemy" + index, maxHp: enemy.hp, sp: 999, mp: 999, guard: 0, active: false, step: 0 })) };
+            state.areas[state.mapId] = { caches: [], enemies: maps[state.mapId].enemies.map((enemy, index) => ({ ...enemy, id: "enemy" + index, maxHp: enemy.hp, speed: enemy.job === "supporter" ? 11 : enemy.boss ? 9 : 7, speedEffect: null, sp: 999, mp: 999, guard: 0, active: false, step: 0 })) };
         }
         return state.areas[state.mapId];
     }
@@ -160,19 +164,21 @@
         return (maps[state.mapId].npcs || []).map((npc, index) => ({ ...npc, id: "villager" + index, villager: true, hp: 1 }));
     }
     // Classify the full shape, not the wall-clipped footprint or occupant count.
+    const offensive = id => skills[id].kind === "damage" || (skills[id].kind === "speed" && skills[id].power < 0);
+    const speed = unit => Math.max(1, (unit.speed || 8) + (unit.level - 1) + (unit.speedEffect?.amount || 0));
     function isArea(id) {
         const skill = skills[id];
         return ["arc", "around", "burst"].includes(skill.shape) || (["front", "line"].includes(skill.shape) && skill.range > 1);
     }
     const faction = unit => unit.villager ? "neutral" : ["aren", "mira"].includes(unit.id) ? "party" : "enemy";
-    const targetRule = id => isArea(id) ? skills[id].kind === "damage" ? "AoE: enemies" : "AoE: allies" : "Single tile: either side";
+    const targetRule = id => isArea(id) ? offensive(id) ? "AoE: enemies" : "AoE: allies" : "Single tile: either side";
     function affected(state, user, id, target = aim(user, id)) {
         const skill = skills[id], tiles = footprint(state, user, id, target);
         return [...party(state), ...area(state).enemies, ...villagers(state)].filter(unit => {
             if (skill.kind === "revive" ? unit.hp > 0 : unit.hp <= 0) return false;
             if (isArea(id)) {
                 const sameSide = faction(unit) === faction(user);
-                if (skill.kind === "damage" ? sameSide || faction(unit) === "neutral" : !sameSide) return false;
+                if (offensive(id) ? sameSide || faction(unit) === "neutral" : !sameSide) return false;
             }
             return tiles.some(tile => tile.x === unit.x && tile.y === unit.y);
         });
@@ -224,7 +230,11 @@
                 if (globalThis.FirstJourneyRules.onSkill) globalThis.FirstJourneyRules.onSkill({ mapId: state.mapId, skill: id, user: { ...user }, target: { ...target }, change: 0 });
                 continue;
             }
-            if (skill.kind === "heal" || skill.kind === "revive") {
+            if (skill.kind === "speed") {
+                const amount = Math.sign(skill.power) * Math.max(1, Math.round(Math.abs(skill.power) * factor));
+                target.speedEffect = { amount, remaining: skill.duration, applied: state.turn };
+                log(state, user.name + " uses " + skill.name + ": " + target.name + " Speed " + (amount > 0 ? "+" : "") + amount + " for " + skill.duration + " rounds.");
+            } else if (skill.kind === "heal" || skill.kind === "revive") {
                 const amount = Math.min((target.maxHp || (target.villager ? 1 : maxStats(target).hp)) - target.hp, power);
                 target.hp += amount;
                 log(state, user.name + " uses " + skill.name + ": " + target.name + " +" + amount + " HP.");
@@ -312,7 +322,7 @@
         if (distance(unit, leader) > 1) approach(state, unit, leader);
     }
     function restore(state) {
-        for (const unit of party(state)) { Object.assign(unit, maxStats(unit)); unit.guard = 0; }
+        for (const unit of party(state)) { Object.assign(unit, maxStats(unit)); unit.guard = 0; unit.speedEffect = null; }
     }
     function travel(state, mapId, x, y) {
         if (state.combat) checkpoint(state, "combat-end");
@@ -326,29 +336,29 @@
         log(state, "Entered " + maps[mapId].name + ".");
         checkpoint(state, "area-entry");
     }
-    function finishTurn(state, followerMoved = false) {
-        state.turn++;
-        const wasInCombat = state.combat;
-        combatCheck(state);
-        // Discovering a group stops at an input boundary. A start checkpoint
-        // therefore resumes before an exchange, never halfway through AI turns.
-        if (!wasInCombat && state.combat && party(state).some(unit => unit.hp > 0)) return;
-        if (!followerMoved) companion(state);
-        for (const enemy of enemies(state).filter(unit => unit.active)) {
-            const targets = party(state).filter(unit => unit.hp > 0).sort((a, b) => distance(enemy, a) - distance(enemy, b));
-            if (!targets.length) break;
-            const target = targets[0];
-            faceToward(enemy, target);
-            enemy.step++;
-            const known = jobSkills(enemy);
-            let id = "jab";
-            if (known.includes("sweep") && enemy.step % 3 === 0) id = "sweep";
-            else if (known.includes("whirlwind") && enemy.step % 5 === 0) id = "whirlwind";
-            else if (known.includes("brace") && enemy.step % 4 === 0) id = "brace";
-            else if (known.includes("thrust") && enemy.step % 2 === 0) id = "thrust";
-            if (known.includes("sweep") && enemy.step % 3 === 2) log(state, enemy.name + " raises his club for his next attack.");
-            if (!use(state, enemy, id, target)) approach(state, enemy, target);
+    function enemyAction(state, enemy) {
+        const targets = party(state).filter(unit => unit.hp > 0).sort((a, b) => distance(enemy, a) - distance(enemy, b));
+        if (!targets.length) return;
+        const target = targets[0];
+        faceToward(enemy, target);
+        enemy.step++;
+        const known = jobSkills(enemy);
+        let id = "jab";
+        if (enemy.job === "supporter") {
+            const ally = enemies(state).find(unit => !unit.speedEffect && distance(enemy, unit) <= 4);
+            if (ally && enemy.step % 2 === 1 && use(state, enemy, "haste", ally)) return;
+            if (!target.speedEffect && use(state, enemy, "slow", target)) return;
+            if (use(state, enemy, "spark", target)) return;
+            approach(state, enemy, target); return;
         }
+        if (known.includes("sweep") && enemy.step % 3 === 0) id = "sweep";
+        else if (known.includes("whirlwind") && enemy.step % 5 === 0) id = "whirlwind";
+        else if (known.includes("brace") && enemy.step % 4 === 0) id = "brace";
+        else if (known.includes("thrust") && enemy.step % 2 === 0) id = "thrust";
+        if (known.includes("sweep") && enemy.step % 3 === 2) log(state, enemy.name + " raises his club for his next attack.");
+        if (!use(state, enemy, id, target)) approach(state, enemy, target);
+    }
+    function endRound(state) {
         if (party(state).every(unit => unit.hp <= 0)) {
             state.defeated++;
             // Keep earned progression and defeated enemies; surviving enemies recover.
@@ -359,47 +369,89 @@
             log(state, "Villagers brought you home. Your progress is retained; town rest restores the party.");
             checkpoint(state, "defeat-return");
         } else {
-            if (state[state.controlled].hp <= 0) state.controlled = state.aren.hp > 0 ? "aren" : "mira";
+            state.controlled = "aren";
             combatCheck(state);
         }
     }
-    function move(state, dx, dy) {
+    function executeMove(state, dx, dy) {
         const unit = state[state.controlled];
         face(state, dx, dy);
         const previous = { x: unit.x, y: unit.y };
-        const follower = party(state).find(member => member !== unit && member.hp > 0);
         const other = party(state).find(member => member !== unit && member.hp > 0 && member.x === unit.x + dx && member.y === unit.y + dy);
         if (other) {
             if (wall(state, other.x, other.y) || solid(state, other.x, other.y) || enemies(state).some(enemy => enemy.x === other.x && enemy.y === other.y)) return false;
             unit.x = other.x; unit.y = other.y;
             faceToward(other, previous); Object.assign(other, previous);
         } else if (!step(state, unit, dx, dy)) return false;
-        let followed = !!other;
-        if (!other && follower && !(follower.id === "mira" && state.mode === "Guard" && state.combat)) {
-            if (distance(follower, previous) <= 1 && !occupied(state, previous.x, previous.y, follower)) {
-                faceToward(follower, previous); follower.x = previous.x; follower.y = previous.y; followed = true;
-            } else if (distance(follower, previous) > 1) followed = approach(state, follower, previous);
-        }
         const portal = [maps[state.mapId].exit, maps[state.mapId].back].filter(Boolean).find(link => passageTiles(link).some(tile => unit.x === tile.x && unit.y === tile.y));
-        if (portal) { state.turn++; travel(state, portal[2], portal[3], portal[4]); }
-        else finishTurn(state, followed);
+        if (portal) { state.round = null; travel(state, portal[2], portal[3], portal[4]); }
         return true;
     }
-    function cast(state, id, target) {
-        const unit = state[state.controlled];
-        if (!skills[id]) return false;
-        target ||= aim(unit, id);
-        if (unit.id === "aren" && !state.godMode && !skills[id]?.basic && !state.equipped.includes(id)) return false;
-        if (unit.id === "mira" && !jobSkills(unit).includes(id)) return false;
-        // Checkpoint before the first offensive action, including ranged initiation.
-        if (skills[id]?.kind === "damage" && !state.combat && canTarget(state, unit, id, target) && unit[skills[id].pool] >= skills[id].cost) {
-            for (const enemy of affected(state, unit, id, target).filter(unit => unit.id.startsWith("enemy"))) enemy.active = true;
-            combatCheck(state);
+    function validAction(state, unit, action) {
+        if (!action || !["skill", "move", "wait", "guard", "potion", "follow", "auto"].includes(action.type)) return false;
+        if (unit.hp <= 0) return action.type === "wait";
+        if (action.type === "skill") {
+            const skill = skills[action.id];
+            return !!skill && availableSkills(state, unit).includes(action.id) && unit[skill.pool] >= skill.cost && ((skill.shape && skill.shape !== "burst") || canTarget(state, unit, action.id, action.target || aim(unit, action.id)));
         }
-        if (!use(state, unit, id, target)) return false;
-        finishTurn(state);
+        if (action.type === "move") return Math.abs(action.dx) + Math.abs(action.dy) === 1 && !wall(state, unit.x + action.dx, unit.y + action.dy) && !solid(state, unit.x + action.dx, unit.y + action.dy) && !enemies(state).some(e => e.x === unit.x + action.dx && e.y === unit.y + action.dy);
+        if (action.type === "potion") {
+            const target = state[action.targetId];
+            return ["hp", "sp", "mp"].includes(action.pool) && state.inventory[action.pool] > 0 && target?.hp > 0 && target[action.pool] < maxStats(target)[action.pool];
+        }
         return true;
     }
+    function submit(state, action, miraAction = null, deferred = false) {
+        if (state.round || !validAction(state, state.aren, action) || (miraAction && !validAction(state, state.mira, miraAction))) return false;
+        if (action.type === "skill" && offensive(action.id)) {
+            for (const enemy of affected(state, state.aren, action.id, action.target).filter(unit => faction(unit) === "enemy")) enemy.active = true;
+        }
+        combatCheck(state);
+        state.turn++;
+        const previous = { x: state.aren.x, y: state.aren.y };
+        const entries = [{ unitId: "aren", action }, { unitId: "mira", action: miraAction || { type: action.type === "move" ? "follow" : "auto", target: previous } }, ...enemies(state).filter(e => e.active).map(e => ({ unitId: e.id, action: { type: "enemy" } }))];
+        const units = [...party(state), ...area(state).enemies];
+        entries.forEach((entry, index) => { entry.speed = speed(units.find(u => u.id === entry.unitId)); entry.order = index; });
+        entries.sort((a, b) => b.speed - a.speed || a.order - b.order);
+        state.round = { entries, index: 0, mapId: state.mapId };
+        state.lastOrder = entries.map(e => e.unitId);
+        if (!deferred) while (state.round) advance(state);
+        return true;
+    }
+    function advance(state) {
+        const round = state.round;
+        if (!round) return false;
+        if (round.index >= round.entries.length) {
+            state.round = null;
+            for (const unit of [...party(state), ...area(state).enemies]) {
+                if (unit.speedEffect && unit.speedEffect.applied < state.turn && --unit.speedEffect.remaining <= 0) unit.speedEffect = null;
+            }
+            endRound(state); return false;
+        }
+        const { unitId, action } = round.entries[round.index++];
+        const unit = [...party(state), ...area(state).enemies].find(u => u.id === unitId);
+        if (!unit || unit.hp <= 0) return true;
+        if (action.type === "enemy") enemyAction(state, unit);
+        else if (action.type === "auto") companion(state);
+        else if (action.type === "follow") {
+            if (!(state.mode === "Guard" && state.combat) && (unit.x !== action.target.x || unit.y !== action.target.y)) {
+                if (distance(unit, action.target) === 1) step(state, unit, action.target.x - unit.x, action.target.y - unit.y);
+                else approach(state, unit, state.aren);
+            }
+        } else if (action.type === "move") executeMove(state, action.dx, action.dy);
+        else if (action.type === "skill") {
+            if (!use(state, unit, action.id, action.target)) log(state, unit.name + " cannot execute " + skills[action.id].name + ".");
+        } else if (action.type === "guard") { unit.guard = 4; log(state, unit.name + " guards."); }
+        else if (action.type === "potion" && validAction(state, unit, action)) {
+            const target = state[action.targetId], pool = action.pool;
+            state.inventory[pool]--; target[pool] = Math.min(maxStats(target)[pool], target[pool] + (pool === "hp" ? 25 : 12));
+            log(state, unit.name + " gives " + target.name + " a " + pool.toUpperCase() + " potion.");
+        }
+        return true;
+    }
+    function move(state, dx, dy) { face(state, dx, dy); return submit(state, { type: "move", dx, dy }); }
+    function cast(state, id, target) { return submit(state, { type: "skill", id, target: target || aim(state.aren, id) }); }
+    function finishTurn(state) { return submit(state, { type: "wait" }); }
     function equip(state, id) {
         if (state.combat || !learned(state, id) || skills[id].basic) return false;
         if (state.equipped.includes(id)) state.equipped.splice(state.equipped.indexOf(id), 1);
@@ -415,11 +467,7 @@
         restore(state); log(state, state.mapId === 1 ? "A free town rest restores HP, SP and MP." : "Used one ration. The party is fully restored.");
         checkpoint(state, "rest"); return true;
     }
-    function potion(state, type, target) {
-        if (!["hp", "sp", "mp"].includes(type) || state.inventory[type] <= 0 || target.hp <= 0 || target[type] >= maxStats(target)[type]) return false;
-        state.inventory[type]--; target[type] = Math.min(maxStats(target)[type], target[type] + (type === "hp" ? 25 : 12));
-        log(state, target.name + " drinks a " + type.toUpperCase() + " potion."); finishTurn(state); return true;
-    }
+    function potion(state, type, target) { return submit(state, { type: "potion", pool: type, targetId: target.id }); }
     function interact(state) {
         const unit = state[state.controlled], map = maps[state.mapId];
         const delta = directions[unit.direction || 2], front = { x: unit.x + delta[0], y: unit.y + delta[1] };
@@ -437,7 +485,7 @@
         for (const npc of map.npcs || []) if (npc.x === front.x && npc.y === front.y) return npc.type;
         log(state, "Face a person or object, then press Enter."); return "none";
     }
-    const api = { isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
+    const api = { speed, offensive, validAction, submit, advance, isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     globalThis.FirstJourneyRules = api;
 })();

@@ -17,7 +17,7 @@ the steward for the ending and reward.
 
 This is a small systems prototype with simple maps and brief dialogue, not a
 finished or timed 20–30 minute adventure. It uses the existing project's MZ
-graphics for maps and generated anime portraits for conversations. No new
+graphics for maps, generated portrait-based walking sprites, and anime portraits for conversations. No new
 downloaded art, audio, or third-party plugins were added. Portrait prompts and
 provenance are recorded in `../Addons/FirstJourneyArt/ART_SOURCES.md`.
 
@@ -29,13 +29,19 @@ provenance are recorded in `../Addons/FirstJourneyArt/ART_SOURCES.md`.
 | A | Choose a skill, preview or aim its hitbox, then Enter to use it |
 | Enter / Z | Interact with the person or object directly in front of you |
 | Space | Wait one turn; does not regenerate resources |
-| Tab | Switch direct control between Aren and Mira, without spending a turn |
+| Tab | Toggle Mira between automatic behavior and direct action commands |
 | C | Set Mira's automatic behavior |
 | K | View learning/mastery and equip or unequip copied skills |
 | I | Use a potion on either conscious party member |
 | Esc / X | Field menu; also cancel a menu |
 
 Menu entries also support mouse selection. Walking is keyboard-controlled.
+The field menu is a narrow panel on the right. Hovering a skill previews its
+range, footprint, default aim, resource cost and effect; selecting it opens the
+existing ground-target confirmation. No resources are spent while previewing.
+The camera tracks the walking animation in one-third-tile (16 pixel) increments.
+Party frames stack vertically at the top left, with red HP, green SP and blue MP
+bars and numeric values. Speed is shown beside each character's name.
 Skills preview their hitboxes directly on the map. Directional attacks use
 the current facing; ranged spells and healing let you aim at ground tiles
 with arrows or a click. Press Enter to cast, even when the hitbox is empty. Cancel spends no turn or resources. Physical
@@ -47,8 +53,10 @@ steps into Aren's previous tile when he walks; her move uses her action for that
 turn. She acts according to her behavior setting when Aren attacks or waits.
 Guard still holds position during combat. Companions are passable: walking into
 one swaps them into the tile you vacated. Turn to face Mira and press Enter
-for contextual conversation. When Mira is controlled,
-Aren follows the same trail rules.
+for contextual conversation. Aren always leads movement. In direct mode,
+choose Aren's action first, then Mira's skill, guard, follow or wait action.
+Neither action executes until both are chosen. Canceling Mira's command menu
+cancels the whole round without spending resources or advancing time.
 
 Town recovery is at the **statue of the Goddess**. Dungeon recovery is at **campfires**.
 The Goddess has deliberately not been given a proper name yet.
@@ -60,22 +68,25 @@ stands behind Aren on the left. The guild steward and provisioner use male/femal
 portraits with shadowed faces. Mira's corrected portrait has one hand resting
 over the other. The field menu includes **Party** (stats, jobs and skills) and
 **Options** (MZ audio and control settings).
-Enemies act after the controlled character and the automatic companion.
-Discovering an enemy group pauses at a fresh input boundary and saves before
-the first exchange. Combat uses the exploration map; there is no battle scene.
+Actions resolve one at a time in descending Speed order; each action and its
+animation finish before the next begins. Speed is sampled when the round
+starts. Ties resolve Aren, Mira, then enemies in map order. Downed actors skip
+their queued action. Ground-targeted spells retain their chosen tile even if
+a faster creature moves away. Combat-start saves occur before the first action.
+Combat uses the exploration map; there is no battle scene.
 
 Mira's **Support** mode heals allies below 65% HP, then attacks while retaining
 some MP. **Attack** prioritizes Light Lance. **Guard** holds position, heals
 when possible, and reduces the next incoming hit. **Follow** spends no
 resources. **Conserve** follows and heals but does not cast offensive magic.
-When controlling Mira directly, Aren automatically uses Sword Cut against
-adjacent enemies and otherwise follows her. A downed character cannot be
-directly controlled; control transfers to the surviving character.
+In direct mode, Aren remains the leader and Mira receives a command after each
+Aren action. If Aren falls, choose Wait to let Mira act; command her to revive
+him when available. If Mira falls, her command step is skipped.
 
 ## Attack areas and entrances
 
 Sword Cut and Quick Jab only hit the tile immediately ahead; casting does not
-turn the controlled character. Turn before opening the skill menu. Enemy and
+turn Aren. Turn before opening the skill menu. Enemy and
 companion AI turn toward their intended target before attacking.
 
 | Skill | Area | Source |
@@ -151,6 +162,28 @@ is saved and an interaction creates an autosave. Older saves default to OFF.
 These numerical values, four-direction movement, observation radius, AI
 thresholds and starting supplies are **provisional implementation defaults**.
 
+## Speed and the Supporter job
+
+Aren starts with Speed 10, Mira with 8, ordinary goblins with 7, goblin
+supporters with 11, and the boss with 9. Each level adds 1 Speed. Speed does
+not grant extra actions or change walking animation speed; it determines order.
+
+Supporters learn Ember, Haste and Slow at level 1, then Quickening Chorus at
+level 3. A goblin chanter on the shrine approach demonstrates these techniques.
+Mira retains her Priestess job. Aren can copy supporter skills normally or try
+them immediately through the testing statue.
+
+| Skill | Cost | Effect |
+| --- | --- | --- |
+| Haste | 3 MP | Single tile within 4; +4 Speed for 3 rounds |
+| Slow | 3 MP | Single tile within 4; −4 Speed for 3 rounds |
+| Quickening Chorus | 6 MP | 3×3 allied area within 4; +3 Speed for 3 rounds |
+
+Copied versions scale with mastery. Chorus requires mastered Haste. A new
+speed effect replaces the existing one rather than stacking. Effects influence
+the next three rounds, expire after those rounds, and clear when resting.
+The current round's order never changes halfway through resolution.
+
 ## Saves and defeat
 
 The latest autosave is slot 0; the field menu's manual save is slot 1. Automatic
@@ -184,6 +217,10 @@ in this act. Additional towns will need a stored last-visited-town destination.
   Map layouts/collision come from the shared grids in the rules plugin.
   Edit those grids and rebuild together; changing only editor tiles will not
   change plugin collision. The build script overwrites its generated fields.
+- `../tools/test-first-journey-turns.cjs`: sequential resolution, speed effects,
+  cancellation validation and serialized-round regression checks.
+- `../tools/pack-first-journey-sprites.cjs`: packs generated frames into 144×192
+  MZ single-character sheets, preserving transparent pixels.
 - No supplied `rmmz_*.js` engine scripts were modified. Default database skills
   are not used by this prototype's custom map-combat system. Future content
   should be added to the prototype skill registry or integrated with MZ data.

@@ -32,3 +32,7 @@ Edit this exact anime portrait of Mira. Change only her hands and the small imme
 ## Mira sprite background extraction
 
 Background extraction only. Produce this exact Mira anime character portrait as a transparent PNG sprite with genuine alpha transparency outside her silhouette. REMOVE the entire dark gradient background. Do NOT redraw, repaint or change the character. In particular keep her corrected hands exactly as shown: one hand resting over the other, fingers NOT intertwined. Preserve the same face, hair, clothing, fine hair edges, colors, pose, framing and resolution. All character pixels fully opaque; only the outside silhouette/background becomes transparent. No fake checkerboard, no black/white solid background.
+
+## Overworld sprites
+Aren and Mira's generated walking sheets, portrait references, packing process,
+and full built-in imagegen prompts are recorded in [Overworld-sprites-v1.md](Overworld-sprites-v1.md).

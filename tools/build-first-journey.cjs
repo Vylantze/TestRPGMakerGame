@@ -21,7 +21,7 @@ for (const [key, definition] of Object.entries(R.maps)) {
         if (wall) data[width * height * 5 + y * width + x] = 1;
     }
     const events = Array(10 + definition.enemies.length).fill(null);
-    events[1] = event(1, "Mira • Priestess", 7, 7, "Actor1", 7);
+    events[1] = event(1, "Mira • Priestess", 7, 7, "$MiraJourney-v1", 0);
     events[1].pages[0].through = true;
     events[2] = event(2, id === 1 ? "Statue of the Goddess" : "Campfire", ...definition.rest, id === 1 ? "!Other2" : "!Flame", id === 1 ? 4 : 2);
     events[2].pages[0].directionFix = true;
@@ -39,8 +39,8 @@ for (const [key, definition] of Object.entries(R.maps)) {
 }
 write("MapInfos.json", infos);
 const actors = read("Actors.json");
-actors[1].name = "Aren"; actors[1].profile = "A swordmaster's son and a master mage's pupil. He copies the form of others' skills, then learns to make them his own.";
-actors[2].name = "Mira"; actors[2].characterIndex = 7; actors[2].faceIndex = 7; actors[2].profile = "Aren's childhood friend. A novice priestess setting out on her coming-of-age journey.";
+actors[1].name = "Aren"; actors[1].characterName = "$ArenJourney-v1"; actors[1].characterIndex = 0; actors[1].profile = "A swordmaster's son and a master mage's pupil. He copies the form of others' skills, then learns to make them his own.";
+actors[2].name = "Mira"; actors[2].characterName = "$MiraJourney-v1"; actors[2].characterIndex = 0; actors[2].faceIndex = 7; actors[2].profile = "Aren's childhood friend. A novice priestess setting out on her coming-of-age journey.";
 write("Actors.json", actors);
 const system = read("System.json");
 system.gameTitle = "First Journey: The Abandoned Shrine";

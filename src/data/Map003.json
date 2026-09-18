@@ -1543,8 +1543,8 @@
           "directionFix": false,
           "image": {
             "tileId": 0,
-            "characterName": "Actor1",
-            "characterIndex": 7,
+            "characterName": "$MiraJourney-v1",
+            "characterIndex": 0,
             "direction": 2,
             "pattern": 1
           },
