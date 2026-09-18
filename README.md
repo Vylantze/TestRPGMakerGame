@@ -18,7 +18,11 @@ Open **`TestProject/` as the workspace root**. The playable MZ project is in
 Arrow keys turn/walk; **A** opens skills; **Enter** interacts; **Space** waits;
 **Tab** toggles Mira's automatic/direct commands; **Esc** opens the field menu.
 Direct mode collects Aren's action and then Mira's before resolving the round
-in Speed order. Legacy-save migration is not supported.
+in Speed order during combat. Exploration resolves immediately. Combat opens
+Move / Skill / Guard / View Turn Order commands and a face-based initiative
+timeline; selecting a timeline actor highlights their map location. Directional
+skills can be rotated with arrows during targeting. Legacy-save migration is
+not supported.
 
 ## Documentation
 

@@ -272,9 +272,75 @@ const server = http.createServer((req, res) => {
         assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices.width), 280);
         await page.screenshot({ path: path.join(output, "field-menu.png") });
         await press("Escape");
+        // A controlled encounter exercises the default menu, timeline, inspection and aiming.
+        await page.evaluate(() => {
+            const s = $gameSystem._firstJourney, R = FirstJourneyRules;
+            s.direct = false; s.aren.x = 8; s.aren.y = 7; s.aren.direction = 6;
+            s.mira.x = 7; s.mira.y = 7; s.mode = "Follow";
+            R.area(s).enemies = R.maps[2].enemies.slice(0, 2).map((e, i) => ({ ...e, id: "enemy" + i, x: 9 + i * 3, y: 7, hp: 100, maxHp: 100, sp: 0, mp: 0, speed: i ? 5 : 20, step: 0, active: true }));
+            R.combatCheck(s); SceneManager._scene.syncJourney();
+        });
+        await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu && !$gamePlayer.isMoving());
+        assert.deepEqual(await page.evaluate(() => SceneManager._scene._journeyChoices._list.map(e => e.name)), ["Move", "Skill", "Guard", "View Turn Order"]);
+        await page.waitForFunction(() => ImageManager.loadFace("Monster").isReady());
+        assert.deepEqual(await page.evaluate(() => SceneManager._scene._journeyTimelineCards.map(c => c.unitId)), ["enemy0", "aren", "mira", "enemy1"]);
+        await page.screenshot({ path: path.join(output, "combat-menu.png") });
+        const inspectTurn = await page.evaluate(() => $gameSystem._firstJourney.turn);
+        await press("ArrowDown"); await press("ArrowDown"); await press("ArrowDown"); await press("Enter");
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyInspectUnit.id), "enemy0");
+        await press("ArrowRight");
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyInspectUnit.id), "aren");
+        const clickPoint = await page.evaluate(() => {
+            const card = SceneManager._scene._journeyTimelineCards[3], rect = Graphics._canvas.getBoundingClientRect();
+            return { x: rect.left + (card.x + card.width / 2) * rect.width / Graphics.width, y: rect.top + (card.y + card.height / 2) * rect.height / Graphics.height };
+        });
+        await page.mouse.click(clickPoint.x, clickPoint.y);
+        await page.waitForFunction(() => SceneManager._scene._journeyInspectUnit.id === "enemy1");
+        const inspectionFrame = await page.evaluate(() => Graphics.frameCount);
+        await page.waitForFunction(frame => Graphics.frameCount >= frame + 3, inspectionFrame);
+        await page.screenshot({ path: path.join(output, "turn-order-inspection.png") });
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), inspectTurn);
+        await press("Escape");
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyInspectUnit), null);
+        await press("Enter"); // Move
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyCombatMove), true);
+        await press("ArrowDown");
+        await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
+        assert.deepEqual(await page.evaluate(() => [$gameSystem._firstJourney.aren.x, $gameSystem._firstJourney.aren.y]), [8, 8]);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), inspectTurn + 1);
+        await page.evaluate(() => { $gameSystem._firstJourney.aren.x = 9; SceneManager._scene.syncJourney(); });
+        await press("Enter"); await press("ArrowRight"); // wall at (10,8)
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), inspectTurn + 1);
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyCombatMove), true);
+        await press("Escape");
+        await press("ArrowDown"); await press("ArrowDown"); await press("Enter"); // Guard
+        await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.guard), 4);
+        await press("ArrowDown"); await press("Enter"); await press("Enter"); // Skill, Sword Cut
+        const aimingTurn = await page.evaluate(() => $gameSystem._firstJourney.turn);
+        const aimingSp = await page.evaluate(() => $gameSystem._firstJourney.aren.sp);
+        await press("ArrowDown");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.direction), 2);
+        assert.deepEqual(await page.evaluate(() => {
+            const pick = SceneManager._scene._journeyTarget; return [pick.targets[0].x, pick.targets[0].y];
+        }), [9, 9]);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), aimingTurn);
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.sp), aimingSp);
+        await page.screenshot({ path: path.join(output, "directional-aiming.png") });
+        await press("Enter");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.sp), aimingSp - 1);
+        await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
+        await page.evaluate(() => SceneManager._scene.beginJourneyTargeting("spark"));
+        const spellFacing = await page.evaluate(() => $gameSystem._firstJourney.aren.direction);
+        await press("ArrowLeft");
+        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.direction), spellFacing, "Ground targeting does not turn Aren");
+        await press("Escape"); await press("Escape"); // Target and skill cancellation
+        await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
+        await press("Escape"); await press("Escape"); // Field menu and back to default combat menu
+        await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
         await page.waitForTimeout(300);
         assert.deepEqual(errors, []);
-        console.log("PASS MZ boot, new game, movement, all menus, direct companion commands, skill hover, transfer, skill targeting, combat checkpoint, engine save/load, defeat return, rest, shopping and ending; no console errors.");
+        console.log("PASS MZ boot, new game, movement, all menus, direct companion commands, skill hover, combat menu, turn-order inspection, directional aiming, transfer, skill targeting, combat checkpoint, engine save/load, defeat return, rest, shopping and ending; no console errors.");
     } catch (error) {
         console.error(errors);
         if (page) {

@@ -36,3 +36,9 @@ Background extraction only. Produce this exact Mira anime character portrait as 
 ## Overworld sprites
 Aren and Mira's generated walking sheets, portrait references, packing process,
 and full built-in imagegen prompts are recorded in [Overworld-sprites-v1.md](Overworld-sprites-v1.md).
+
+## Combat timeline faces
+The combat timeline crops the existing ArenPortrait-v4 and MiraPortrait images
+for party faces and uses face index 1 of the existing `src/img/faces/Monster.png`
+for goblins. Rendering crops only; source images are unchanged. The Monster
+face retains its original RPG Maker asset license.

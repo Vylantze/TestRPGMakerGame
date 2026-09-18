@@ -401,15 +401,34 @@
         }
         return true;
     }
+    function turnOrder(state) {
+        if (!state.combat) return [];
+        if (state.round) return state.round.entries.map(entry => ({ unitId: entry.unitId, speed: entry.speed }));
+        return [...party(state), ...enemies(state).filter(unit => unit.active)].filter(unit => unit.hp > 0)
+            .map((unit, order) => ({ unitId: unit.id, speed: speed(unit), order }))
+            .sort((a, b) => b.speed - a.speed || a.order - b.order);
+    }
     function submit(state, action, miraAction = null, deferred = false) {
         if (state.round || !validAction(state, state.aren, action) || (miraAction && !validAction(state, state.mira, miraAction))) return false;
-        if (action.type === "skill" && offensive(action.id)) {
-            for (const enemy of affected(state, state.aren, action.id, action.target).filter(unit => faction(unit) === "enemy")) enemy.active = true;
+        for (const [unit, command] of [[state.aren, action], [state.mira, miraAction]]) {
+            if (command?.type === "skill" && offensive(command.id)) {
+                for (const enemy of affected(state, unit, command.id, command.target).filter(target => faction(target) === "enemy")) enemy.active = true;
+            }
         }
         combatCheck(state);
         state.turn++;
         const previous = { x: state.aren.x, y: state.aren.y };
-        const entries = [{ unitId: "aren", action }, { unitId: "mira", action: miraAction || { type: action.type === "move" ? "follow" : "auto", target: previous } }, ...enemies(state).filter(e => e.active).map(e => ({ unitId: e.id, action: { type: "enemy" } }))];
+        const entries = [{ unitId: "aren", action }, { unitId: "mira", action: miraAction || { type: action.type === "move" ? "follow" : "auto", target: previous } }, ...enemies(state).filter(e => e.active).map(e => ({ unitId: e.id, action: { type: "enemy" } }))].filter(entry => [...party(state), ...area(state).enemies].find(unit => unit.id === entry.unitId)?.hp > 0);
+        if (!state.combat) {
+            // Exploration resolves immediately in leader/follower order, without initiative or pacing delays.
+            state.lastOrder = [];
+            const mapId = state.mapId;
+            for (const entry of entries) {
+                executeAction(state, entry);
+                if (state.mapId !== mapId) return true;
+            }
+            endRound(state); return true;
+        }
         const units = [...party(state), ...area(state).enemies];
         entries.forEach((entry, index) => { entry.speed = speed(units.find(u => u.id === entry.unitId)); entry.order = index; });
         entries.sort((a, b) => b.speed - a.speed || a.order - b.order);
@@ -428,7 +447,10 @@
             }
             endRound(state); return false;
         }
-        const { unitId, action } = round.entries[round.index++];
+        executeAction(state, round.entries[round.index++]);
+        return true;
+    }
+    function executeAction(state, { unitId, action }) {
         const unit = [...party(state), ...area(state).enemies].find(u => u.id === unitId);
         if (!unit || unit.hp <= 0) return true;
         if (action.type === "enemy") enemyAction(state, unit);
@@ -485,7 +507,7 @@
         for (const npc of map.npcs || []) if (npc.x === front.x && npc.y === front.y) return npc.type;
         log(state, "Face a person or object, then press Enter."); return "none";
     }
-    const api = { speed, offensive, validAction, submit, advance, isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
+    const api = { turnOrder, speed, offensive, validAction, submit, advance, isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     globalThis.FirstJourneyRules = api;
 })();

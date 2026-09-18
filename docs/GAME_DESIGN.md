@@ -178,7 +178,10 @@ are charged once per cast, not once per affected creature.
 Hovering over a skill in the list displays its range, footprint, default aim
 when available, cost, and effect details. Selecting it proceeds to map targeting.
 Arrows or a click choose a ground tile; confirmation uses the skill. Canceling
-the preview or target selection spends no resources.
+the preview or target selection spends no resources. While targeting a skill
+relative to Aren (such as a sword strike or sweep), direction inputs turn him
+and rotate the footprint without moving him or spending an action. Ground-aimed
+magic continues to move its cursor instead.
 
 | Shape | Example | Behavior |
 | --- | --- | --- |
@@ -209,11 +212,22 @@ follow, or wait action. Both choices are collected before execution. Canceling
 the companion command menu abandons the round without advancing time or spending
 resources. If Mira is down, her command step is skipped.
 
-All participating actions resolve sequentially in descending **Speed** order.
+During combat, participating actions resolve sequentially in descending **Speed** order.
 The animation or movement for an action finishes before the next begins. Speed
 is sampled at the start of the round; ties use Aren, Mira, then map enemy order.
 A character defeated before their turn skips their action. A spell aimed at a
 block retains that aim even if a faster creature moves away.
+
+Outside combat, actions and following resolve immediately without initiative
+sorting or sequential delays. Speed-effect durations advance only in combat.
+
+Combat automatically opens a four-option menu between rounds: Move, Skill,
+Guard, and View Turn Order. Move accepts one directional step; blocked moves
+and cancellations spend no action. The top timeline shows faces, names, and
+Speed in execution order, marking the active actor while resolving. View Turn
+Order lets the player select faces with arrows or a click to highlight each
+actor's overworld location, with camera focus when needed. Inspection costs no
+action; Enter/Esc returns to commands. Esc from commands opens the field menu.
 
 Base Speed is 10 for Aren, 8 for Mira, 7 for ordinary goblins, 11 for supporters,
 and 9 for the boss; each level above the first adds 1. Speed changes turn order,
@@ -227,7 +241,7 @@ Supporter skills introduce three-round speed effects:
 | Slow | 3 MP | −4 Speed to one selected tile |
 | Quickening Chorus | 6 MP | +3 Speed to allies in a 3×3 selected area |
 
-These effects influence the next three rounds rather than reordering the
+These effects influence the next three combat rounds rather than reordering the
 current one. New speed effects replace existing ones; they do not stack. Rest
 clears them. Aren's copies scale with mastery, and learning Chorus requires
 mastered Haste.
@@ -242,7 +256,7 @@ party defeat triggers the return-to-town recovery behavior.
 ## Presentation and player information
 
 Party status is stacked at the upper left, with **red HP**, **green SP**, and
-**blue MP** bars, numeric values, levels, and Speed. A narrow field menu inspired
+**blue MP** bars, numeric values, levels, and in-combat Speed. A narrow field menu inspired
 by Pokémon provides party details, options, skills, loadout, potions, companion
 behavior, and save/load access. Basic slashes, spell effects, and floating
 numbers show party and enemy actions on the map.

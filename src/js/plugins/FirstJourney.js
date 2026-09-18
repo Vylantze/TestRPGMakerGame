@@ -119,6 +119,7 @@
 
     };
     Scene_Map.prototype.closeJourneyChoices = function() {
+        this._journeyCombatMenu = false;
         if (this._journeyChoices) {
             this._windowLayer.removeChild(this._journeyChoices);
             this._journeyChoices.destroy();
@@ -128,8 +129,9 @@
     Scene_Map.prototype.choices = function(entries, cancel, width = 360) {
         this.closeJourneyChoices();
         this._journeyPreview = null;
-        const height = Math.min(460, entries.length * 36 + 24);
-        const win = new JourneyChoices(new Rectangle(Graphics.boxWidth - width - 16, 24, width, height), entries);
+        const y = state().combat ? 132 : 24;
+        const height = Math.min(460, Graphics.boxHeight - y - 132, entries.length * 36 + 24);
+        const win = new JourneyChoices(new Rectangle(Graphics.boxWidth - width - 16, y, width, height), entries);
         win.setHandler("cancel", () => { this.closeJourneyChoices(); if (cancel) cancel(); });
         this._journeyChoices = win;
         this.addWindow(win);
@@ -142,7 +144,7 @@
     };
     Scene_Map.prototype.commandUnit = function() { return this._journeyPendingAction ? state().mira : state().aren; };
     Scene_Map.prototype.submitJourneyAction = function(action) {
-        this.closeJourneyChoices(); this._journeyPreview = null;
+        this.closeJourneyChoices(); this._journeyPreview = null; this._journeyCombatMove = false;
         const s = state(), unit = this.commandUnit();
         if (!R.validAction(s, unit, action)) { R.log(s, "Cannot do that: check resources, range and line of sight."); return false; }
         if (this._journeyPendingAction) {
@@ -211,7 +213,7 @@
                 "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Sword Cut costs SP; Ember costs MP.",
                 "Witness a basic skill 3 times to copy its form at 60% power.\nPractice raises it at 6/12/18 points to 80/100/120%.\nDebug units: watching +25; using +100.",
                 "Advanced skills need their prerequisite at 100% mastery.\nUntil then each observation adds 5/300 learning units.\nLoadouts change outside combat; starting attacks use no slots.",
-                "All actions resolve in descending Speed order.\nDowned allies need rest or Revive. If both fall, you return\nto town with progression retained. Use map exits to retreat."
+                "Combat actions resolve in descending Speed order.\nDowned allies need rest or Revive. If both fall, you return\nto town with progression retained. Use map exits to retreat."
             ]); } }
         ], null, 280);
     };
@@ -234,7 +236,7 @@
     };
     Scene_Map.prototype.drawJourney = function() {
         const b = this._journeyHud.bitmap, s = state();
-        const key = JSON.stringify([!!this._journeyChoices, s.turn, s.mapId, s.direct, s.round?.index, R.speed(s.aren), R.speed(s.mira), s.mode, s.quest, s.gold, s.inventory, s.log, s.aren.hp, s.mira.hp, s.aren.sp, s.aren.mp, s.mira.sp, s.mira.mp, $gameMap.displayX(), $gameMap.displayY(), saveStatus]);
+        const key = JSON.stringify([s.combat, !!this._journeyChoices, s.turn, s.mapId, s.direct, s.round?.index, R.speed(s.aren), R.speed(s.mira), s.mode, s.quest, s.gold, s.inventory, s.log, s.aren.hp, s.mira.hp, s.aren.sp, s.aren.mp, s.mira.sp, s.mira.mp, $gameMap.displayX(), $gameMap.displayY(), saveStatus]);
         if (this._journeyHudKey === key) return;
         this._journeyHudKey = key;
         b.clear(); b.fontFace = $gameSystem.mainFontFace(); b.fontSize = 17;
@@ -244,7 +246,7 @@
             const max = R.maxStats(unit), x = 12, y = 12 + index * 116;
             b.fillRect(x, y, 220, 108, "rgba(12,20,32,0.9)");
             b.fontSize = 16;
-            text(unit.name + "  Lv." + unit.level + "  SPD " + R.speed(unit) + (unit.hp <= 0 ? "  DOWN" : ""), x + 10, y + 3, 204);
+            text(unit.name + "  Lv." + unit.level + (s.combat ? "  SPD " + R.speed(unit) : "") + (unit.hp <= 0 ? "  DOWN" : ""), x + 10, y + 3, 204);
             [["hp", "#d94c55"], ["sp", "#48bd76"], ["mp", "#478ce0"]].forEach(([pool, color], row) => {
                 const yy = y + 32 + row * 23;
                 b.fillRect(x + 10, yy, 200, 18, "#233044");
@@ -252,7 +254,7 @@
                 b.fontSize = 13; text(pool.toUpperCase() + "  " + unit[pool] + " / " + max[pool], x + 18, yy - 3, 185);
             });
         });
-        if (!this._journeyChoices) {
+        if (!this._journeyChoices && !s.combat) {
             b.fillRect(Graphics.width - 320, 12, 308, 108, "rgba(12,20,32,0.9)");
             b.fontSize = 15;
             text(R.maps[s.mapId].name, Graphics.width - 310, 15, 290, "#f0d79b");
@@ -289,8 +291,27 @@
             if (Graphics.frameCount >= (this._journeyActionUntil || 0) && !$gamePlayer.isMoving() && !$gameMap.events().some(event => event.isMoving())) { R.advance(state()); this._journeyActionUntil = Graphics.frameCount + 12; this.syncJourney(); }
             return;
         }
+        if (this._journeyCombatMenu) {
+            if (Input.isTriggered("journeySkills")) this.skillMenu();
+            else if (Input.isTriggered("journeyItems")) this.items();
+            else if (Input.isTriggered("journeyBehavior")) this.behavior();
+            else if (Input.isTriggered("journeyJournal")) this.journal();
+            else if (Input.isTriggered("journeyControl")) this.toggleMiraCommands();
+            else if (Input.isTriggered("journeyWait")) this.submitJourneyAction({ type: "wait" });
+            return;
+        }
         if (hadChoices || this._journeyChoices || $gameMessage.isBusy() || $gamePlayer.isTransferring() || !this.isActive() || SceneManager.isSceneChanging()) return;
         if ($gamePlayer.isMoving() || $gameMap.events().some(event => event.isMoving())) return;
+        if (state().combat) {
+            if (Input.isTriggered("journeySkills")) this.skillMenu();
+            else if (Input.isTriggered("journeyWait")) this.submitJourneyAction({ type: "wait" });
+            else if (Input.isTriggered("journeyItems")) this.items();
+            else if (Input.isTriggered("journeyBehavior")) this.behavior();
+            else if (Input.isTriggered("journeyJournal")) this.journal();
+            else if (Input.isTriggered("journeyControl")) { this.toggleMiraCommands(); this.combatMenu(); }
+            else this.combatMenu();
+            return;
+        }
         if (Input.isTriggered("journeySkills")) this.skillMenu();
         else if (Input.isTriggered("journeyBehavior")) this.behavior();
         else if (Input.isTriggered("journeyJournal")) this.journal();

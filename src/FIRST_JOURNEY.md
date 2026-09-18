@@ -41,9 +41,9 @@ range, footprint, default aim, resource cost and effect; selecting it opens the
 existing ground-target confirmation. No resources are spent while previewing.
 The camera tracks the walking animation in one-third-tile (16 pixel) increments.
 Party frames stack vertically at the top left, with red HP, green SP and blue MP
-bars and numeric values. Speed is shown beside each character's name.
+bars and numeric values. Speed is shown beside each character's name in combat.
 Skills preview their hitboxes directly on the map. Directional attacks use
-the current facing; ranged spells and healing let you aim at ground tiles
+the current facing and can be rotated with arrows during targeting; ranged spells and healing let you aim at ground tiles
 with arrows or a click. Press Enter to cast, even when the hitbox is empty. Cancel spends no turn or resources. Physical
 attacks have slash effects; magic has projectiles or restorative effects, with
 floating damage/healing numbers for both party and enemy actions.
@@ -68,12 +68,22 @@ stands behind Aren on the left. The guild steward and provisioner use male/femal
 portraits with shadowed faces. Mira's corrected portrait has one hand resting
 over the other. The field menu includes **Party** (stats, jobs and skills) and
 **Options** (MZ audio and control settings).
-Actions resolve one at a time in descending Speed order; each action and its
+In combat, actions resolve one at a time in descending Speed order; each action and its
 animation finish before the next begins. Speed is sampled when the round
 starts. Ties resolve Aren, Mira, then enemies in map order. Downed actors skip
 their queued action. Ground-targeted spells retain their chosen tile even if
 a faster creature moves away. Combat-start saves occur before the first action.
+Outside combat, actions and following resolve immediately without Speed sorting
+or sequential delays. Speed effects do not lose duration while exploring.
 Combat uses the exploration map; there is no battle scene.
+
+The combat menu opens automatically between rounds: **Move**, **Skill**,
+**Guard**, and **View Turn Order**. Move accepts one direction; a blocked step
+or cancellation spends no action. Esc opens the usual field menu.
+The top timeline shows actor faces, names and Speed from fastest to slowest;
+the current actor is marked during execution. View Turn Order lets arrows or
+a click select any actor and highlight their location, panning the camera
+when needed. Enter/Esc returns to commands without spending an action.
 
 Mira's **Support** mode heals allies below 65% HP, then attacks while retaining
 some MP. **Attack** prioritizes Light Lance. **Guard** holds position, heals
@@ -85,8 +95,10 @@ him when available. If Mira falls, her command step is skipped.
 
 ## Attack areas and entrances
 
-Sword Cut and Quick Jab only hit the tile immediately ahead; casting does not
-turn Aren. Turn before opening the skill menu. Enemy and
+Sword Cut and Quick Jab only hit the tile immediately ahead. Arrow inputs
+during directional targeting turn Aren and rotate the footprint for free;
+confirming casts in that direction. Ranged ground targeting still moves the
+aim cursor instead. Enemy and
 companion AI turn toward their intended target before attacking.
 
 | Skill | Area | Source |
@@ -181,7 +193,7 @@ them immediately through the testing statue.
 
 Copied versions scale with mastery. Chorus requires mastered Haste. A new
 speed effect replaces the existing one rather than stacking. Effects influence
-the next three rounds, expire after those rounds, and clear when resting.
+the next three combat rounds, expire after those rounds, and clear when resting.
 The current round's order never changes halfway through resolution.
 
 ## Saves and defeat
@@ -241,11 +253,12 @@ Playwright import path will need adjusting on another machine. It does not
 change the native MZ playtest's saves. MZ/NW.js deployment should still receive
 a complete manual playthrough before distribution.
 
-Verified on 19 September 2026: 27 rules checks and 8 sequential-turn checks
+Verified on 19 September 2026: 27 rules checks and 12 sequential-turn checks
 pass. The baseline expedition clears both shrine maps and returns to the guild
 in 131 turns, at level 3 with one ration left and no defeats. The browser run
 passes new-game startup, movement, one-third-tile camera scrolling, menus, skill
-hover, direct companion commands and cancellation, targeting, combat checkpoints,
+hover, direct companion commands and cancellation, combat menus, timeline
+inspection, directional aiming, targeting, combat checkpoints,
 save/load, defeat return, rest, shopping and the ending, with no console errors.
 This establishes functionality, not final difficulty or pacing.
 
