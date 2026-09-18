@@ -43,18 +43,16 @@ coverage target.
 
 This workspace is a Git repository. After each completed task that changes
 project files, run the appropriate checks, review the diff, and summarize the
-changes for the user. Create a commit only after the user explicitly approves
-that commit. Completing a task or approving an earlier commit does not grant
-approval for a new commit. Leave changes uncommitted until approval is given.
-Stage only files belonging to the approved commit; preserve unrelated user
+changes for the user. Local commits may be made at any time without further
+user approval. Stage only files belonging to the task; preserve unrelated user
 changes and never include player saves.
 For every commit performed by this agent, use `Codex Agent` with email
 `mira.dev.agent@gmail.com` as both author and committer. Preserve the user's
 default Git identity. Local commits do not require a GitHub access token;
 never store tokens in project files, commit messages, or Git remote URLs.
-After user approval, use the repository-local `git agent-commit` alias, or its
+Use the repository-local `git agent-commit` alias, or its
 equivalent: `git -c user.name="Codex Agent" -c user.email=mira.dev.agent@gmail.com commit`.
-The alias only selects the agent identity; it does not grant commit approval.
+The alias selects the agent identity; it does not authorize pushes.
 For agent pushes, authenticate as GitHub account `Mira-Dev-Agent` using Git
 Credential Manager. This repository selects that account with local
 `credential.https://github.com.username` and enables `useHttpPath` to scope
@@ -62,8 +60,9 @@ credential selection by repository. Never fall back to the user's personal
 account if agent authentication or repository access fails.
 Do not rewrite existing commits to change their authors unless requested.
 Use concise imperative commit subjects (for example, `Add innkeeper dialogue`).
-Do not create empty commits for tasks with no file changes, and do not push
-unless the user requests it. Report the commit hash after an approved commit.
+Do not create empty commits for tasks with no file changes. Pushes require
+explicit user approval for the push; permission to commit does not authorize
+a push. Report the commit hash after committing.
 Keep unrelated assets and game-data changes out of the same commit.
 Pull requests should describe player-
 visible behavior, list modified maps/data/plugins, link the relevant issue when
