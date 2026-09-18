@@ -1,27 +1,148 @@
-# First Journey workspace
+# First Journey: The Abandoned Shrine
 
-Open this `TestProject` folder as the workspace root.
+A fantasy RPG Maker MZ prototype about Aren, a novice adventurer who learns his
+own versions of skills by observing allies and enemies. He and his childhood
+friend Mira explore a goblin-occupied shrine in a turn-based overworld, with no
+separate battle scene.
 
-- `Project1/`: playable RPG Maker MZ project. Open `Project1/game.rmmzproject` and use Ctrl+R to playtest.
-- `tools/`: map generator, rules tests, expedition test, and engine playtest.
-- `Addons/`: art provenance, original backups, QA screenshots, reference packs, and installers. These are not runtime assets.
-- `AGENTS.md`: project contribution instructions.
+Open **`TestProject/` as the workspace root**. The playable MZ project is in
+**`src/`**; the former `Project1/` directory name is no longer current.
 
-The shared [`../assets/`](../assets/) folder is a read-only source library.
-Its assets may be used in this project. Save edited versions outside that
-folder, in `Addons/EditedAssets/` or the appropriate `Project1/` asset directory,
-using a new versioned filename and recording its source. This is a project
-workflow rule; it does not change Windows filesystem permissions.
+## Play
 
-Run from this directory:
+1. Open `src/game.rmmzproject` in RPG Maker MZ.
+2. Choose **Playtest** (`Ctrl+R`), then **New Game**.
+3. Speak to the guild steward in Briar Glen, enter the shrine through the eastern
+   wall opening, defeat the nest leader, and return to the guild.
 
-```powershell
-node tools/build-first-journey.cjs
-node tools/test-first-journey.cjs
-node tools/test-first-journey-expedition.cjs
-node tools/test-first-journey-engine.cjs
+Arrow keys turn/walk; **A** opens skills; **Enter** interacts; **Space** waits;
+**Tab** toggles Mira's automatic/direct commands; **Esc** opens the field menu.
+Direct mode collects Aren's action and then Mira's before resolving the round
+in Speed order. Legacy-save migration is not supported.
+
+## Documentation
+
+- [Lore and game design](docs/GAME_DESIGN.md): original concept, characters,
+  copying abilities, progression, resources, combat, presentation, and future scope.
+- [Prototype guide](src/FIRST_JOURNEY.md): controls, current tuning, saves, and
+  implementation details.
+- [Conversation log](docs/conversation-log.txt): chronological user/assistant
+  text and clarification questions, with credentials redacted.
+- [Agent instructions](AGENTS.md): development, asset, logging, and Git policy.
+- [Art sources](Addons/FirstJourneyArt/ART_SOURCES.md) and
+  [walking-sprite provenance](Addons/FirstJourneyArt/Overworld-sprites-v1.md).
+
+## Repository layout
+
+```text
+TestProject/
+├── README.md
+├── AGENTS.md
+├── .gitignore
+├── docs/
+│   ├── GAME_DESIGN.md
+│   └── conversation-log.txt
+├── src/                         Playable RPG Maker MZ project
+│   ├── game.rmmzproject         Open this in the MZ editor
+│   ├── index.html               Browser/NW.js entry point
+│   ├── package.json            NW.js window/runtime configuration
+│   ├── FIRST_JOURNEY.md
+│   ├── data/                   Maps, actors, system, and MZ database JSON
+│   ├── js/
+│   │   ├── rmmz_*.js           Supplied engine scripts
+│   │   ├── libs/               Runtime libraries
+│   │   ├── plugins.js          Enabled plugin list
+│   │   └── plugins/            FirstJourneyRules, FirstJourney, Presentation
+│   ├── img/                    Runtime art, portraits, and walking sprites
+│   ├── audio/  effects/  movies/  fonts/  css/  icon/
+│   └── save/                   Local saves and settings; ignored by Git
+├── tools/                      Generation, testing, and commit/log helpers
+└── Addons/
+    ├── FirstJourneyArt/         Source art, prompts, and provenance
+    ├── FirstJourneyBackup/      Preserved original starter-project data
+    └── FirstJourneyQA/          Playtest screenshots
 ```
 
-The engine playtest uses the locally installed Chrome browser and bundled Playwright runtime. Tests store screenshots in `Addons/FirstJourneyQA/` and use isolated browser saves.
+The shared source library is outside the repository at **`../assets/`**. It is
+read-only: read, reference, or copy assets, but do not modify their files or
+metadata. Save derivatives under a new versioned name in `src/img/` or an
+appropriate runtime directory, or create `Addons/EditedAssets/` when needed.
+Record their source and changes in the art documentation. This is a workflow
+policy, not a change to Windows filesystem permissions.
 
-See [the prototype guide](Project1/FIRST_JOURNEY.md) for controls and mechanics.
+## Build and test
+
+Run commands from `TestProject/`. There is no npm build pipeline; `src/package.json`
+is the game runtime configuration.
+
+```powershell
+# Rebuild the three editor-readable maps and related generated data.
+node tools/build-first-journey.cjs
+
+# Pure Node.js rules, sequential turns, and complete expedition checks.
+node tools/test-first-journey.cjs
+node tools/test-first-journey-turns.cjs
+node tools/test-first-journey-expedition.cjs
+
+# Real MZ browser playtest, including input, UI, targeting, and save/load.
+node tools/test-first-journey-engine.cjs
+
+# Check conversation filtering and credential redaction.
+node tools/test-conversation-log.cjs
+```
+
+The map generator reads the shared grids in `src/js/plugins/FirstJourneyRules.js`
+and writes Maps 001–003, MapInfos, selected actor/system fields, and the enabled
+plugin list. Review changes before rebuilding; edits to generated map tiles
+alone do not change the custom rules' collision grid.
+
+The engine test requires Chrome and Playwright. It currently imports Playwright
+from the local bundled runtime at
+`C:/Users/digi9/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/`.
+Adjust that import for another machine. It serves `src/` on loopback, uses
+isolated browser storage, and writes screenshots to `Addons/FirstJourneyQA/`.
+It does not use the native MZ playtest's `src/save/` files.
+
+`node tools/pack-first-journey-sprites.cjs` regenerates the two 144×192 walking
+sheets from the preserved generated source images. It uses Sharp from the same
+local bundled runtime; its import also needs adapting on another machine.
+Use MZ's **Deployment** workflow to prepare a distributable build. Existing
+RPG Maker engine/art assets remain subject to their original licenses.
+
+## Conversation logging and agent commits
+
+Local agent commits may be made without further approval. **Every push requires
+explicit user approval.** Agent author and committer are `Codex Agent
+<mira.dev.agent@gmail.com>`; pushes use the authenticated `Mira-Dev-Agent`
+GitHub account. Keep personal Git identity unchanged and never commit saves or
+credentials.
+
+The repository-local `git agent-commit` alias invokes `tools/agent-commit.cjs`.
+Immediately before committing, it refreshes and stages `docs/conversation-log.txt`,
+then commits the already-staged task files using the agent identity. It stops
+if the current transcript cannot be read. On a new checkout, install the alias:
+
+```powershell
+git config --local alias.agent-commit '!node tools/agent-commit.cjs'
+```
+
+Stage only the intended changes, then run `git agent-commit -m "Describe the change"`.
+The wrapper uses `CODEX_THREAD_ID` to find the current local transcript under
+`$CODEX_HOME/sessions`, or `~/.codex/sessions` when `CODEX_HOME` is unset. It preserves
+previous task sections and refreshes the current one, without duplicating it.
+
+For a standalone log refresh, run:
+
+```powershell
+node tools/update-conversation-log.cjs
+# Or provide an exact local transcript path:
+node tools/update-conversation-log.cjs --session <path-to-rollout.jsonl>
+```
+
+The text export includes visible user/assistant messages and clarification
+questions. It excludes tool traces, internal instructions, hidden reasoning,
+and binary images; credentials and password suggestions are redacted. The
+pre-commit cutoff is recorded. A final reply written after a commit is captured
+at the next refresh. The agent must review the staged log for sensitive material
+and ensure it is updated before every commit, including when an alternative
+Git command is necessary. The helper neither pushes nor grants push approval.

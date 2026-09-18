@@ -122,7 +122,7 @@ loadout restrictions. This is an all-skills testing toggle: HP, costs, and
 normal resource recovery still apply. Borrowed access does not overwrite
 learned skills, mastery, or equipped slots; using skills in this mode does not
 add Aren's practice. Turning it off restores normal availability. The toggle
-is saved and an interaction creates an autosave. Older saves default to OFF.
+is saved and an interaction creates an autosave.
 
 ## Resources and progression
 
@@ -229,23 +229,24 @@ Run from the repository root:
 
 ```text
 node tools/test-first-journey.cjs
+node tools/test-first-journey-turns.cjs
 node tools/test-first-journey-expedition.cjs
 node tools/test-first-journey-engine.cjs
 ```
 
-The first two checks require only Node. The engine test uses locally bundled
+The first three checks require only Node. The engine test uses locally bundled
 Playwright and Chrome, serves the game on loopback, uses an isolated browser
 profile, and records QA screenshots under `Addons/FirstJourneyQA/`. Its local
 Playwright import path will need adjusting on another machine. It does not
 change the native MZ playtest's saves. MZ/NW.js deployment should still receive
 a complete manual playthrough before distribution.
 
-Verified on 19 September 2026: all 15 rules checks pass; the baseline expedition
-clears both maps and returns to the guild in 122 turns, at level 3 with one
-ration left and no defeats. The browser engine run passes startup, keyboard
-movement, menus, control switching, map transfers, skill targeting, checkpoint
-serialization/loading, defeat return, town rest, purchases and the ending,
-with no console errors. A native MZ playtest also reaches the opening scene.
+Verified on 19 September 2026: 27 rules checks and 8 sequential-turn checks
+pass. The baseline expedition clears both shrine maps and returns to the guild
+in 131 turns, at level 3 with one ration left and no defeats. The browser run
+passes new-game startup, movement, one-third-tile camera scrolling, menus, skill
+hover, direct companion commands and cancellation, targeting, combat checkpoints,
+save/load, defeat return, rest, shopping and the ending, with no console errors.
 This establishes functionality, not final difficulty or pacing.
 
 ## Assets and licensing
