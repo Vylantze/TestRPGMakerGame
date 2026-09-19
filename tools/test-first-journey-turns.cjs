@@ -15,7 +15,7 @@ test("Actions mutate state one at a time, fastest first", () => {
     assert.equal(s.aren.hp, hp); assert.equal(s.aren.mp, 18);
     R.advance(s); assert.ok(s.aren.hp < hp); assert.equal(s.aren.mp, 18);
     R.advance(s); assert.equal(s.aren.mp, 17); assert.equal(s.mira.guard, 0);
-    R.advance(s); assert.equal(s.mira.guard, 1);
+    R.advance(s); assert.equal(s.mira.guard, 3);
     R.advance(s); assert.equal(s.round, null);
 });
 test("A slower actor killed before their action spends no resources", () => {
@@ -62,7 +62,7 @@ test("Deferred rounds survive serialization without repeating an action", () => 
     const s = fixture(); R.submit(s, { type: "wait" }, { type: "guard" }, true); R.advance(s);
     const resumed = JSON.parse(JSON.stringify(s)), hp = resumed.aren.hp;
     while (resumed.round) R.advance(resumed);
-    assert.equal(resumed.aren.hp, hp); assert.equal(resumed.mira.guard, 1);
+    assert.equal(resumed.aren.hp, hp); assert.equal(resumed.mira.guard, 3);
 });
 test("Exploration ignores Speed and resolves movement without a deferred queue", () => {
     const s = R.create(); s.mira.speed = 100;

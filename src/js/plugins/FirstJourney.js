@@ -70,6 +70,14 @@
         itemHeight() { return 36; }
         resetFontSettings() { super.resetFontSettings(); this.contents.fontSize = 20; }
         makeCommandList() { for (let i = 0; i < this._entries.length; i++) this.addCommand(this._entries[i].label, String(i), this._entries[i].enabled !== false); }
+        cursorRight(wrap) {
+            if (this._journeyJournal) this.smoothSelect(Math.min(this.maxItems() - 1, this.index() + this.maxPageItems()));
+            else super.cursorRight(wrap);
+        }
+        cursorLeft(wrap) {
+            if (this._journeyJournal) this.smoothSelect(Math.max(0, this.index() - this.maxPageItems()));
+            else super.cursorLeft(wrap);
+        }
         drawItem(index) {
             const entry = this._entries[index];
             if (!entry.journalId) return super.drawItem(index);
@@ -202,6 +210,7 @@
             if (skill.prerequisite && !R.ready(s, id)) entries.push({ label: "       Requires " + R.skills[skill.prerequisite].name + " at 100% mastery; locked observations +5 units", enabled: false });
         }
         this.choices(entries, null, 680);
+        this._journeyChoices._journeyJournal = true;
     };
     Scene_Map.prototype.behavior = function() {
         const s = state();

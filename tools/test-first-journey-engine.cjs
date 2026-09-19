@@ -350,7 +350,7 @@ const server = http.createServer((req, res) => {
         await press("Enter"); // reopen combat commands from persistent Move
         await press("ArrowDown"); await press("ArrowDown"); await press("Enter"); // Guard
         await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu);
-        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.aren.guard), 1);
+        assert.equal(await page.evaluate(() => { const u = $gameSystem._firstJourney.aren; return u.guard - (u.level - 1) * 2; }), 3);
         await press("Enter"); await press("Enter"); // Skill, Slash
         const aimingTurn = await page.evaluate(() => $gameSystem._firstJourney.turn);
         const aimingSp = await page.evaluate(() => $gameSystem._firstJourney.aren.sp);
@@ -392,7 +392,7 @@ const server = http.createServer((req, res) => {
         await page.screenshot({ path: path.join(output, "mira-command.png") });
         await press("ArrowDown"); await press("ArrowDown"); await press("Enter");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.turn), directTurn + 1);
-        assert.equal(await page.evaluate(() => $gameSystem._firstJourney.mira.guard), 1);
+        assert.equal(await page.evaluate(() => { const u = $gameSystem._firstJourney.mira; return u.guard - (u.level - 1) * 2; }), 3);
         await page.waitForFunction(() => SceneManager._scene._journeyCombatMenu && SceneManager._scene._journeyChoices.isOpenAndActive());
         await press("Escape"); // enter persistent Move while direct commands remain enabled
         assert.ok(await page.evaluate(() => SceneManager._scene._journeyCombatMove));
@@ -430,7 +430,23 @@ const server = http.createServer((req, res) => {
             ["mend", "light", "jab", "thrust"].forEach((id, i) => s.knowledge[id] = { learned: true, observations: 3, practice: [0, 6, 12, 18][i] });
             SceneManager._scene.journal();
         });
-        assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices._entries.filter(e => e.journalId).length), 78);
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices._entries.filter(e => e.journalId).length), 77);
+        await page.waitForFunction(() => SceneManager._scene._journeyChoices.isOpenAndActive());
+        const pageSize = await page.evaluate(() => SceneManager._scene._journeyChoices.maxPageItems());
+        await press("ArrowRight");
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices.index()), pageSize);
+        await press("ArrowLeft");
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices.index()), 0);
+        for (const [key, start, direction] of [["ArrowDown", 0, 1], ["ArrowUp", 30, -1], ["ArrowRight", 0, 1], ["ArrowLeft", 60, -1]]) {
+            await page.evaluate(index => SceneManager._scene._journeyChoices.select(index), start);
+            const frame = await page.evaluate(() => Graphics.frameCount);
+            await page.keyboard.down(key);
+            await page.waitForFunction(frame => Graphics.frameCount >= frame + 44, frame);
+            await page.keyboard.up(key);
+            const index = await page.evaluate(() => SceneManager._scene._journeyChoices.index());
+            assert.ok((index - start) * direction > (key === "ArrowRight" || key === "ArrowLeft" ? pageSize : 1), key + " repeats while held");
+        }
+        await page.evaluate(() => SceneManager._scene._journeyChoices.select(0));
         await page.screenshot({ path: path.join(output, "journal-proficiency.png") });
         await page.evaluate(knowledge => { $gameSystem._firstJourney.knowledge = knowledge; }, originalKnowledge);
         await press("Escape");

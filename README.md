@@ -52,14 +52,14 @@ cancellation and reopening, and stores the choice in saves.
 
 Self-centered spells now include Flame Nova, Frost Nova, Storm Nova, and
 Healing Circle. Quickening Chorus also surrounds its caster. Guard reduces the
-next hit by 1 damage; Brace provides greater protection, even as a novice copy.
+next hit by 3 damage plus 2 per level above level 1, inheriting the former Brace effect. Guard costs no resources and uses no skill slot.
 
 ## Skill data and Stats
 
 The field menu’s **Stats** item opens lifetime combat rounds and exploration
 steps. The skill journal displays tier-coloured proficiency bars.
 
-`src/js/plugins/Skills.json` contains the current 78-skill catalogue;
+`src/js/plugins/Skills.json` contains the current 77-skill catalogue;
 `src/data/Skills.json` is its generated RPG Maker editor export. The original
 database is archived in `Addons/FirstJourneyBackup/SkillArchive/`. See
 [skill catalogue and tuning](docs/SKILL_CATALOGUE.md) for sources, prerequisites,
@@ -195,3 +195,5 @@ pre-commit cutoff is recorded. A final reply written after a commit is captured
 at the next refresh. The agent must review the staged log for sensitive material
 and ensure it is updated before every commit, including when an alternative
 Git command is necessary. The helper neither pushes nor grants push approval.
+
+Skill Journal: Up/Down moves one entry; Left/Right jumps one visible page. Hold any direction to repeat navigation; page jumps stop at the first or last entry.

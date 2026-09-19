@@ -73,7 +73,7 @@ members. The prototype implements Priestess, Fighter, and Supporter tables:
 | Job | Level 1 | Later techniques |
 | --- | --- | --- |
 | Priestess | Heal I, Saint I | Starlight I at 2; Heal II at 3; Revive at 5 |
-| Fighter | Quick Slash | Brace and Piercing Thrust at 2; Heavy Slash and Whirlwind at 3 |
+| Fighter | Quick Slash | Piercing Thrust at 2; Heavy Slash and Whirlwind at 3 |
 | Supporter | Fire I, Haste, Slow | Quickening Chorus at 3 |
 
 Mira remains a Priestess. A goblin chanter in the shrine is a Supporter, providing
@@ -221,7 +221,7 @@ and follower steps do not add exploration steps.
 
 Self-centered spells now include Flame Nova, Frost Nova, Storm Nova, and
 Healing Circle. Quickening Chorus also surrounds its caster. Guard reduces the
-next hit by 1 damage; Brace provides greater protection, even as a novice copy.
+next hit by 3 damage plus 2 per level above level 1, inheriting the former Brace effect. Guard costs no resources and uses no skill slot.
 
 ## Sequential turns, Speed, and companion commands
 

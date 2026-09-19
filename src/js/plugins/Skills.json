@@ -139,17 +139,6 @@
     "areaRadius": 1,
     "areaProfile": "compact"
   },
-  "brace": {
-    "name": "Brace",
-    "pool": "sp",
-    "cost": 2,
-    "power": 3,
-    "range": 0,
-    "kind": "guard",
-    "sourceId": 2,
-    "tier": 1,
-    "delivery": "melee"
-  },
   "sweep": {
     "name": "Heavy Slash",
     "pool": "sp",

@@ -1,6 +1,6 @@
 # Skill catalogue and progression
 
-`src/js/plugins/Skills.json` is the authoritative 78-skill overworld catalogue. It loads through RPG Maker’s database loader and directly through CommonJS for rules tests. Run `node tools/build-test-skills.cjs` to regenerate the editor-facing `src/data/Skills.json`; that export is not the overworld rules source.
+`src/js/plugins/Skills.json` is the authoritative 77-skill overworld catalogue. It loads through RPG Maker’s database loader and directly through CommonJS for rules tests. Run `node tools/build-test-skills.cjs` to regenerate the editor-facing `src/data/Skills.json`; that export is not the overworld rules source.
 
 The original database is preserved unchanged at `Addons/FirstJourneyBackup/SkillArchive/Skills-original-2026-09-19.json`. Original numeric IDs supply names, elements, icons and animation references; damage and costs are retuned for the prototype. Source effects involving status ailments, drains, escape, MP recovery, reflection, and unsupported stat modifiers were not imported as playable mechanics. Weapon attacks that originally inflicted status ailments now deal direct damage only. Empty/reserved rows are omitted from the runtime catalogue. No original formula is evaluated in overworld combat.
 
@@ -35,7 +35,7 @@ Combat begins at round 1. The label advances after a resolved round when combat 
 
 Targeted and directional area skills affect both factions. Only self-centered areas retain enemy-only damage and ally-only healing/buffs. Healing Circle and Quickening Chorus include the caster. Mira's automatic targeted blasts avoid friendly fire.
 
-Four new self-centered spells use the existing elemental/healing prerequisites: Flame Nova, Frost Nova, Storm Nova, and Healing Circle. Quickening Chorus is now self-centered too. Guard absorbs 1 damage from the next hit; Brace's novice copied reduction is 2 and increases with proficiency and level.
+Four new self-centered spells use the existing elemental/healing prerequisites: Flame Nova, Frost Nova, Storm Nova, and Healing Circle. Quickening Chorus is now self-centered too. Guard replaces Brace: it absorbs 3 damage plus 2 per level above level 1 from the next hit, with no resource or skill-slot cost. It is an action, not a learnable skill.
 
 ## Catalogue
 
@@ -52,7 +52,6 @@ Four new self-centered spells use the existing elemental/healing prerequisites: 
 | thrust | Piercing Thrust | 1 | 197 | — | 3 SP + 1 MP | line | 8 |
 | whirlwind | Whirlwind Slash | 2 | 201 | Quick Slash | 4 SP + 2 MP | around | 16 |
 | burst | Starlight I | 1 | 144 | Saint I | 5 MP + 1 SP | compact | 6 |
-| brace | Brace | 1 | 2 | — | 2 SP | single | 3 |
 | sweep | Heavy Slash | 2 | 216 | Quick Slash | 4 SP + 1 MP | arc | 16 |
 | greaterMend | Heal II | 2 | 53 | Heal I | 5 MP | single | 28 |
 | revive | Raise I | 2 | 64 | Heal I | 8 MP | single | 20 |

@@ -28,7 +28,7 @@
         mage: [{ level: 1, skill: "spark" }],
         supporter: [{ level: 1, skill: "spark" }, { level: 1, skill: "haste" }, { level: 1, skill: "slow" }, { level: 3, skill: "quickening" }],
         priestess: [{ level: 1, skill: "mend" }, { level: 1, skill: "light" }, { level: 2, skill: "burst" }, { level: 3, skill: "greaterMend" }, { level: 5, skill: "revive" }],
-        fighter: [{ level: 1, skill: "jab" }, { level: 2, skill: "brace" }, { level: 2, skill: "thrust" }, { level: 3, skill: "sweep" }, { level: 3, skill: "whirlwind" }]
+        fighter: [{ level: 1, skill: "jab" }, { level: 2, skill: "thrust" }, { level: 3, skill: "sweep" }, { level: 3, skill: "whirlwind" }]
     };
     function extendJobs() {
         for (const [id, skill] of Object.entries(skills)) {
@@ -348,7 +348,7 @@
                 if (jobSkills(unit).includes("burst") && blast.length > 1 && blast.every(hit => faction(hit) === "enemy") && use(state, unit, "burst", target)) return;
                 if (use(state, unit, "light", target)) return;
             }
-            if (mode === "Guard" && state.combat) { unit.guard = 1; return; }
+            if (mode === "Guard" && state.combat) { unit.guard = 3 + (unit.level - 1) * 2; return; }
         } else if (target && use(state, unit, "cut", target)) return;
         if (distance(unit, leader) > 1) approach(state, unit, leader);
     }
@@ -384,7 +384,6 @@
         }
         if (known.includes("sweep") && enemy.step % 3 === 0) id = "sweep";
         else if (known.includes("whirlwind") && enemy.step % 5 === 0) id = "whirlwind";
-        else if (known.includes("brace") && enemy.step % 4 === 0) id = "brace";
         else if (known.includes("thrust") && enemy.step % 2 === 0) id = "thrust";
         if (known.includes("sweep") && enemy.step % 3 === 2) log(state, enemy.name + " raises his club for his next attack.");
         if (!use(state, enemy, id, target)) approach(state, enemy, target);
@@ -498,7 +497,7 @@
         } else if (action.type === "move") executeMove(state, action.dx, action.dy);
         else if (action.type === "skill") {
             if (!use(state, unit, action.id, action.target)) log(state, unit.name + " cannot execute " + skills[action.id].name + ".");
-        } else if (action.type === "guard") { unit.guard = 1; log(state, unit.name + " guards."); }
+        } else if (action.type === "guard") { unit.guard = 3 + (unit.level - 1) * 2; log(state, unit.name + " guards."); }
         else if (action.type === "potion" && validAction(state, unit, action)) {
             const target = state[action.targetId], pool = action.pool;
             state.inventory[pool]--; target[pool] = Math.min(maxStats(target)[pool], target[pool] + (pool === "hp" ? 25 : 12));

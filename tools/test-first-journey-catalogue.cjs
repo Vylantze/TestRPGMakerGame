@@ -71,6 +71,15 @@ assert.equal(R.use(blastState, blastState.aren, "source105", { x: 8, y: 7 }), fa
 assert.equal(blastState.aren.mp, mana, "Insufficient secondary resources charge neither pool");
 const guardState = R.create();
 R.submit(guardState, { type: "guard" }); const guard = guardState.aren.guard;
-R.use(guardState, guardState.aren, "brace");
-assert.equal(guard, 1); assert.ok(guardState.aren.guard > guard, "Even novice copied Brace beats Guard");
-console.log("PASS friendly fire, enemy healing, caster-centered filtering, scaled secondary costs and Guard below Brace");
+assert.equal(guard, 3);
+assert.equal(R.skills.brace, undefined);
+assert.ok(!editor.some(row => row?.name === "Brace"));
+guardState.aren.level = 4;
+R.submit(guardState, { type: "guard" });
+assert.equal(guardState.aren.guard, 9);
+Object.assign(guardState.mira, { x: guardState.aren.x, y: guardState.aren.y + 1, direction: 8 });
+const hp = guardState.aren.hp;
+assert.ok(R.use(guardState, guardState.mira, "cut", guardState.aren));
+assert.ok(guardState.aren.hp < hp);
+assert.equal(guardState.aren.guard, 0, "Guard expires after absorbing one hit");
+console.log("PASS friendly fire, enemy healing, caster-centered filtering, scaled secondary costs and level-scaled Guard replacing Brace");
