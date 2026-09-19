@@ -159,9 +159,9 @@
         else if (["around", "burst"].includes(skill.shape)) {
             const center = skill.shape === "around" ? user : target;
             tiles = [];
-            const radius = skill.shape === "burst" ? Math.max(1, Math.min(2, skill.areaRadius || 1)) : 1;
+            const radius = skill.shape === "burst" || skill.circular ? Math.max(1, Math.min(2, skill.areaRadius || 1)) : 1;
             for (let y = -radius; y <= radius; y++) for (let x = -radius; x <= radius; x++) {
-                if (skill.shape === "burst" ? x * x + y * y <= (radius === 2 ? 6.25 : 1) : x || y) tiles.push({ x: center.x + x, y: center.y + y });
+                if (skill.shape === "burst" || skill.circular ? x * x + y * y <= (radius === 2 ? 6.25 : 1) : x || y) tiles.push({ x: center.x + x, y: center.y + y });
             }
         } else tiles = [{ x: target.x, y: target.y }];
         const origin = skill.shape === "burst" ? target : user;
@@ -182,12 +182,12 @@
         return ["arc", "around", "burst"].includes(skill.shape) || (["front", "line"].includes(skill.shape) && skill.range > 1);
     }
     const faction = unit => unit.villager ? "neutral" : ["aren", "mira"].includes(unit.id) ? "party" : "enemy";
-    const targetRule = id => isArea(id) ? offensive(id) ? "AoE: enemies" : "AoE: allies" : "Single tile: either side";
+    const targetRule = id => skills[id].shape === "around" ? offensive(id) ? "Self AoE: enemies" : "Self AoE: allies" : isArea(id) ? "AoE: both sides" : "Single tile: either side";
     function affected(state, user, id, target = aim(user, id)) {
         const skill = skills[id], tiles = footprint(state, user, id, target);
         return [...party(state), ...area(state).enemies, ...villagers(state)].filter(unit => {
             if (skill.kind === "revive" ? unit.hp > 0 : unit.hp <= 0) return false;
-            if (isArea(id)) {
+            if (skill.shape === "around") {
                 const sameSide = faction(unit) === faction(user);
                 if (offensive(id) ? sameSide || faction(unit) === "neutral" : !sameSide) return false;
             }
@@ -222,11 +222,19 @@
         if (skill.shape) return footprint(state, user, id, target).some(tile => tile.x === target.x && tile.y === target.y);
         return !wall(state, target.x, target.y) && distance(user, target) <= skill.range && sight(state, user, target);
     }
+    function areaSize(id) {
+        const skill = skills[id];
+        if (skill.shape === "burst" || skill.circular) return skill.areaRadius === 2 ? 21 : 5;
+        if (skill.shape === "around") return 8;
+        if (skill.shape === "arc") return 3;
+        if (skill.shape === "line") return skill.range;
+        return 1;
+    }
     function skillCosts(id) {
         const skill = skills[id];
         if (!skill) return {};
         const costs = { [skill.pool]: skill.cost };
-        if (isArea(id) && offensive(id)) costs[skill.pool === "sp" ? "mp" : "sp"] = Math.max(1, skill.secondaryCost || 1);
+        if (isArea(id) && offensive(id)) costs[skill.pool === "sp" ? "mp" : "sp"] = Math.max(Math.ceil(areaSize(id) / 5), skill.secondaryCost || 1);
         return costs;
     }
     function canAfford(unit, id) {
@@ -336,10 +344,11 @@
             const wounded = party(state).filter(member => member.hp > 0 && member.hp < maxStats(member).hp * 0.65).sort((a, b) => a.hp / maxStats(a).hp - b.hp / maxStats(b).hp);
             if (["Support", "Conserve", "Guard"].includes(mode) && wounded[0] && use(state, unit, "mend", wounded[0])) return;
             if (["Attack", "Support"].includes(mode) && target && (mode === "Attack" || unit.mp > 8)) {
-                if (jobSkills(unit).includes("burst") && affected(state, unit, "burst", target).length > 1 && use(state, unit, "burst", target)) return;
+                const blast = affected(state, unit, "burst", target);
+                if (jobSkills(unit).includes("burst") && blast.length > 1 && blast.every(hit => faction(hit) === "enemy") && use(state, unit, "burst", target)) return;
                 if (use(state, unit, "light", target)) return;
             }
-            if (mode === "Guard" && state.combat) { unit.guard = 4; return; }
+            if (mode === "Guard" && state.combat) { unit.guard = 1; return; }
         } else if (target && use(state, unit, "cut", target)) return;
         if (distance(unit, leader) > 1) approach(state, unit, leader);
     }
@@ -489,7 +498,7 @@
         } else if (action.type === "move") executeMove(state, action.dx, action.dy);
         else if (action.type === "skill") {
             if (!use(state, unit, action.id, action.target)) log(state, unit.name + " cannot execute " + skills[action.id].name + ".");
-        } else if (action.type === "guard") { unit.guard = 4; log(state, unit.name + " guards."); }
+        } else if (action.type === "guard") { unit.guard = 1; log(state, unit.name + " guards."); }
         else if (action.type === "potion" && validAction(state, unit, action)) {
             const target = state[action.targetId], pool = action.pool;
             state.inventory[pool]--; target[pool] = Math.min(maxStats(target)[pool], target[pool] + (pool === "hp" ? 25 : 12));
@@ -533,7 +542,7 @@
         for (const npc of map.npcs || []) if (npc.x === front.x && npc.y === front.y) return npc.type;
         log(state, "Face a person or object, then press Enter."); return "none";
     }
-    const api = { skillCosts, canAfford, costText, turnOrder, speed, offensive, validAction, submit, advance, isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
+    const api = { areaSize, skillCosts, canAfford, costText, turnOrder, speed, offensive, validAction, submit, advance, isArea, targetRule, passageTiles, aim, villagers, availableSkills, toggleGodMode, footprint, affected, targetOptions, progressText, skills, jobs, maps, create, area, enemies, party, distance, maxStats, jobSkills, wall, sight, mastery, ready, learned, slots, observe, use, move, cast, equip, rest, potion, interact, travel, finishTurn, combatCheck, log, checkpoint, canTarget, directions, face, faceToward, solid };
     if (typeof module !== "undefined" && module.exports) module.exports = api;
     globalThis.FirstJourneyRules = api;
 })();

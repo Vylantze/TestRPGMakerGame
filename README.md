@@ -23,8 +23,9 @@ Tab retains the direct-command preference for future combat encounters.
 **Tab** toggles Mira's automatic/direct commands; **Esc** opens the field menu.
 In combat, direct mode collects Aren's action and then Mira's before resolving the round
 in Speed order. Exploration resolves immediately. Combat opens
-Move / Skill / Guard / View Turn Order commands. Cancel enters persistent Move;
-Enter reopens combat commands, while Esc in Move opens the field menu. A face-based initiative
+Skill / Move / Guard / View Turn Order / Menu commands. Cancel enters persistent Move;
+Enter or Esc in Move reopens combat commands; Menu opens the field menu,
+which returns to combat commands when closed. A face-based initiative
 timeline shows execution order; selecting an actor highlights their map location. Directional
 skills can be rotated with arrows during targeting. Legacy-save migration is
 not supported.
@@ -34,11 +35,11 @@ playing, with companions facing the preceding party member, without advancing ti
 returns the party to idle. Party walking frames are centered with aligned feet and
 are at least as wide and tall as the Guild Steward and Provisioner.
 
-Offensive AoE skills spend their normal cost plus at least 1 of the other
-resource: physical areas require 1 MP and magical areas require 1 SP. This
-applies to party and enemy attacks, even empty or wall-clipped casts. Both
-pools must be sufficient; costs are shown together in skill selection.
-Healing and support buffs retain their normal costs. Only combat actions
+Offensive AoEs pay a secondary cost based on their full footprint: one resource
+per five tiles, rounded up. Five-tile blasts cost 1, eight-neighbor sweeps cost
+2, and twenty-one-tile blasts cost 5 (MP for physical attacks; SP for magic).
+Clipping a blast against walls does not reduce its cost. Both pools are checked
+before either is spent. Healing and support buffs retain their normal costs. Only combat actions
 increase round counters. The timeline shows the current encounter round, reset
 to 1 at every combat start. The separate Stats window shows cumulative combat
 rounds and successful exploration steps; turns, blocked moves, casts, waits,
@@ -49,12 +50,16 @@ Higher tiers offer both compact, powerful attacks and wider, weaker variants.
 The skill menu remembers each character’s last selected skill across targeting
 cancellation and reopening, and stores the choice in saves.
 
+Self-centered spells now include Flame Nova, Frost Nova, Storm Nova, and
+Healing Circle. Quickening Chorus also surrounds its caster. Guard reduces the
+next hit by 1 damage; Brace provides greater protection, even as a novice copy.
+
 ## Skill data and Stats
 
 The field menu’s **Stats** item opens lifetime combat rounds and exploration
 steps. The skill journal displays tier-coloured proficiency bars.
 
-`src/js/plugins/Skills.json` contains the current 74-skill catalogue;
+`src/js/plugins/Skills.json` contains the current 78-skill catalogue;
 `src/data/Skills.json` is its generated RPG Maker editor export. The original
 database is archived in `Addons/FirstJourneyBackup/SkillArchive/`. See
 [skill catalogue and tuning](docs/SKILL_CATALOGUE.md) for sources, prerequisites,

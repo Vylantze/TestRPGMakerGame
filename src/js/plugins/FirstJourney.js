@@ -228,6 +228,7 @@
         ], () => this.fieldMenu(), 420);
     };
     Scene_Map.prototype.fieldMenu = function() {
+        this._journeyCombatMove = false;
         this.choices([
             { label: "Party", run: () => this.partyMenu() },
             { label: "Options", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Options); } },
@@ -244,10 +245,10 @@
                 "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Slash costs SP; Fire I costs MP.",
                 "Witness a basic skill 3 times to copy its form at 60% power.\nPractice raises it at 6/12/18 points to 80/100/120%.\nDebug units: watching +25; using +100.",
                 "Advanced skills need their prerequisite at 100% mastery.\nUntil then each observation adds 5/300 learning units.\nLoadouts change outside combat; starting attacks use no slots.",
-                "Combat actions resolve in descending Speed order.\nCancel from combat commands enters persistent Move.\nEnter reopens commands; Esc in Move opens the normal menu.",
-                "AoE attacks also cost 1 of the other resource: SP or MP.\nOnly combat actions count rounds. Downed allies need rest\nor Revive. Defeat returns you to town with progress retained."
+                "Combat actions resolve in descending Speed order.\nCancel from combat commands enters persistent Move.\nEnter/Esc in Move opens commands; Menu opens the normal menu.",
+                "Larger AoE attacks cost more of the other resource: SP or MP.\nOnly combat actions count rounds. Downed allies need rest\nor Revive. Defeat returns you to town with progress retained."
             ]); } }
-        ], null, 280);
+        ], () => { if (state().combat) this.combatMenu(); }, 280);
     };
     Scene_Map.prototype.toggleMiraCommands = function() {
         state().direct = !state().direct;

@@ -50,3 +50,27 @@ for (const [id, skill] of Object.entries(R.skills).filter(([, skill]) => skill.s
 console.log("PASS targeted circular sizes and maximum-tier power tradeoff");
 
 assert.ok(data.source113.areaRadius < data.source105.areaRadius && data.source113.power > data.source105.power, "Blizzard III retains compact power while Flame III trades power for coverage");
+const blastState = R.create();
+Object.assign(blastState.aren, { x: 8, y: 7, hp: 1, mp: 99 });
+Object.assign(blastState.mira, { x: 9, y: 7, hp: 10 });
+const foe = { id: "enemy0", name: "Dummy", x: 8, y: 8, hp: 2, maxHp: 99, level: 1 };
+R.area(blastState).enemies = [foe];
+assert.deepEqual(R.affected(blastState, blastState.aren, "flameNova").map(u => u.id), ["enemy0"]);
+assert.deepEqual(R.affected(blastState, blastState.aren, "healingCircle").map(u => u.id), ["aren", "mira"]);
+assert.ok(R.use(blastState, blastState.aren, "healingCircle"));
+assert.ok(blastState.aren.hp > 1 && blastState.mira.hp > 10); assert.equal(foe.hp, 2);
+assert.ok(R.use(blastState, blastState.aren, "source56", { x: 8, y: 7 }));
+assert.ok(foe.hp > 2, "Targeted area healing also heals enemies");
+assert.equal(R.skillCosts("burst").sp, 1);
+assert.equal(R.skillCosts("source105").sp, 5);
+assert.equal(R.skillCosts("stormNova").sp, 5);
+assert.equal(R.skillCosts("whirlwind").mp, 2);
+blastState.aren.sp = 4;
+const mana = blastState.aren.mp;
+assert.equal(R.use(blastState, blastState.aren, "source105", { x: 8, y: 7 }), false);
+assert.equal(blastState.aren.mp, mana, "Insufficient secondary resources charge neither pool");
+const guardState = R.create();
+R.submit(guardState, { type: "guard" }); const guard = guardState.aren.guard;
+R.use(guardState, guardState.aren, "brace");
+assert.equal(guard, 1); assert.ok(guardState.aren.guard > guard, "Even novice copied Brace beats Guard");
+console.log("PASS friendly fire, enemy healing, caster-centered filtering, scaled secondary costs and Guard below Brace");

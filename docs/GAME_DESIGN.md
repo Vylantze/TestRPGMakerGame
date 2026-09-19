@@ -192,14 +192,15 @@ magic continues to move its cursor instead.
 | Surrounding area | Whirlwind | Hits the eight neighboring tiles |
 | Area around a selected tile | Starlight I | A five-tile circle centered within four steps |
 
-Offensive AoEs affect enemies only, relative to the caster. Healing and buff AoEs
-affect allies only. Neutral villagers are excluded from offensive AoEs.
+Targeted and directional AoEs affect both sides: damage can hurt allies and
+healing can help enemies. Only AoEs centered on the user filter by faction: attacks
+hit enemies, while healing and buffs affect allies (including the caster).
 **Single-block hitboxes can affect either side**, so a basic attack can hurt an
 ally and a single-tile heal can help an enemy. The spell's long casting range
 does not make it an AoE. Walls clipping a multi-tile footprint do not change its
 classification into a single-target skill.
 
-Villagers struck by single-tile attacks currently warn Aren not to attack people
+Villagers struck by attacks currently warn Aren not to attack people
 in public. They stay alive and remain available for conversation; they give no
 combat rewards. Any future reputation or other penalty is not implemented.
 
@@ -208,15 +209,19 @@ playing, with companions facing the preceding party member, without advancing ti
 returns the party to idle. Party walking frames are centered with aligned feet and
 are at least as wide and tall as the Guild Steward and Provisioner.
 
-Offensive AoE skills spend their normal cost plus at least 1 of the other
-resource: physical areas require 1 MP and magical areas require 1 SP. This
-applies to party and enemy attacks, even empty or wall-clipped casts. Both
-pools must be sufficient; costs are shown together in skill selection.
-Healing and support buffs retain their normal costs. Only combat actions
+Offensive AoEs pay a secondary cost based on their full footprint: one resource
+per five tiles, rounded up. Five-tile blasts cost 1, eight-neighbor sweeps cost
+2, and twenty-one-tile blasts cost 5 (MP for physical attacks; SP for magic).
+Clipping a blast against walls does not reduce its cost. Both pools are checked
+before either is spent. Healing and support buffs retain their normal costs. Only combat actions
 increase round counters. The timeline shows the current encounter round, reset
 to 1 at every combat start. The separate Stats window shows cumulative combat
 rounds and successful exploration steps; turns, blocked moves, casts, waits,
 and follower steps do not add exploration steps.
+
+Self-centered spells now include Flame Nova, Frost Nova, Storm Nova, and
+Healing Circle. Quickening Chorus also surrounds its caster. Guard reduces the
+next hit by 1 damage; Brace provides greater protection, even as a novice copy.
 
 ## Sequential turns, Speed, and companion commands
 
@@ -239,11 +244,11 @@ block retains that aim even if a faster creature moves away.
 Outside combat, actions and following resolve immediately without initiative
 sorting or sequential delays. Speed-effect durations advance only in combat.
 
-Combat begins with a four-option menu: Move, Skill, Guard, and View Turn Order.
+Combat begins with Skill, Move, Guard, View Turn Order, and Menu.
 Selecting Move or pressing Cancel from this menu enters persistent Move mode.
 Each valid directional step resolves a combat round, then stays in Move mode,
-including after direct companion commands. Enter reopens combat commands; Esc
-opens the normal field menu, which returns to Move when closed. Blocked steps
+including after direct companion commands. Enter or Esc in Move reopens combat
+commands. Menu opens the normal field menu, which returns to combat commands when closed. Blocked steps
 and menu navigation spend no action. The top timeline shows faces, names, and
 Speed in execution order, marking the active actor while resolving. View Turn
 Order lets the player select faces with arrows or a click to highlight each
@@ -260,7 +265,7 @@ Supporter skills introduce three-round speed effects:
 | --- | --- | --- |
 | Haste | 3 MP | +4 Speed to one selected tile |
 | Slow | 3 MP | −4 Speed to one selected tile |
-| Quickening Chorus | 6 MP | +3 Speed to allies in a five-tile selected circle |
+| Quickening Chorus | 6 MP | +3 Speed to allies in a five-tile circle around the caster |
 
 These effects influence the next three combat rounds rather than reordering the
 current one. New speed effects replace existing ones; they do not stack. Rest

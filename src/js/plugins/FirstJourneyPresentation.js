@@ -347,14 +347,13 @@
         if (!current().combat || current().round) return;
         this._journeyCombatMove = false;
         this.choices([
-            { label: "Move", enabled: current().aren.hp > 0, run: () => {
-                this.enterJourneyMove();
-            } },
             { label: "Skill", enabled: current().aren.hp > 0, run: () => this.skillMenu() },
+            { label: "Move", enabled: current().aren.hp > 0, run: () => this.enterJourneyMove() },
             { label: "Guard", run: () => this.submitJourneyAction({ type: current().aren.hp > 0 ? "guard" : "wait" }) },
             { label: "View Turn Order", run: () => {
                 this.closeJourneyChoices(); this._journeyInspectOrder = true; this._journeyOrderIndex = 0; Input.update();
-            } }
+            } },
+            { label: "Menu", run: () => this.fieldMenu() }
         ], () => this.enterJourneyMove(), 248);
         this._journeyCombatMenu = true;
     };
@@ -364,9 +363,9 @@
         b.fontSize = 20; b.textColor = "#ffdc91";
         b.drawText("Move — choose a direction", 24, Graphics.height - 82, Graphics.width - 48, 30);
         b.fontSize = 16; b.textColor = "#ffffff";
-        b.drawText("Arrows: move    Enter: combat commands    Esc: menu", 24, Graphics.height - 48, Graphics.width - 48, 28);
+        b.drawText("Arrows: move    Enter / Esc: combat commands", 24, Graphics.height - 48, Graphics.width - 48, 28);
         if (Input.isTriggered("cancel") || TouchInput.isCancelled()) {
-            b.clear(); this.fieldMenu(); return true;
+            b.clear(); this.combatMenu(); return true;
         }
         if (Input.isTriggered("ok")) { b.clear(); this.combatMenu(); return true; }
         if (Input.isTriggered("journeySkills")) { b.clear(); this.skillMenu(); return true; }

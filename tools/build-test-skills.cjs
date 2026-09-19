@@ -3,6 +3,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const skills = require(path.join(root, "src/js/plugins/Skills.json"));
+const R = require(path.join(root, "src/js/plugins/FirstJourneyRules.js"));
 const archive = require(path.join(root, "Addons/FirstJourneyBackup/SkillArchive/Skills-original-2026-09-19.json"));
 const rows = [null], used = new Set();
 let next = archive.length;
@@ -14,7 +15,7 @@ for (const [key, skill] of Object.entries(skills)) {
     used.add(id);
     const area = ["arc", "around", "burst", "line"].includes(skill.shape);
     const attack = skill.kind === "damage" || (skill.kind === "speed" && skill.power < 0);
-    const secondary = area && attack ? Math.max(1, skill.secondaryCost || 1) : 0;
+    const secondary = area && attack ? R.skillCosts(key)[skill.pool === "mp" ? "sp" : "mp"] : 0;
     rows[id] = {
         ...source, id, name: skill.name,
         description: "Tier " + skill.tier + ". " + skill.delivery + ", " + (area ? "area" : "single tile") + "." + (skill.prerequisite ? " Requires mastered " + skills[skill.prerequisite].name + "." : ""),

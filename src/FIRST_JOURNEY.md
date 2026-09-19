@@ -80,11 +80,11 @@ Outside combat, actions and following resolve immediately without Speed sorting
 or sequential delays. Speed effects do not lose duration while exploring.
 Combat uses the exploration map; there is no battle scene.
 
-Combat starts with **Move**, **Skill**, **Guard**, and **View Turn Order**.
+Combat starts with **Skill**, **Move**, **Guard**, **View Turn Order**, and **Menu**.
 Move or Cancel enters persistent Move mode: each valid step resolves a round
 and keeps movement active, including after Mira’s direct command. Enter reopens
-combat commands. Esc in Move opens the usual field menu; closing it returns to
-Move. Blocked steps and menu navigation spend no action.
+combat commands, as does Esc in Move. Menu opens the usual field menu; closing
+it returns to combat commands. Blocked steps and menu navigation spend no action.
 The top timeline shows actor faces, names and Speed from fastest to slowest;
 the current actor is marked during execution. View Turn Order lets arrows or
 a click select any actor and highlight their location, panning the camera
@@ -103,11 +103,11 @@ playing, with companions facing the preceding party member, without advancing ti
 returns the party to idle. Party walking frames are centered with aligned feet and
 are at least as wide and tall as the Guild Steward and Provisioner.
 
-Offensive AoE skills spend their normal cost plus at least 1 of the other
-resource: physical areas require 1 MP and magical areas require 1 SP. This
-applies to party and enemy attacks, even empty or wall-clipped casts. Both
-pools must be sufficient; costs are shown together in skill selection.
-Healing and support buffs retain their normal costs. Only combat actions
+Offensive AoEs pay a secondary cost based on their full footprint: one resource
+per five tiles, rounded up. Five-tile blasts cost 1, eight-neighbor sweeps cost
+2, and twenty-one-tile blasts cost 5 (MP for physical attacks; SP for magic).
+Clipping a blast against walls does not reduce its cost. Both pools are checked
+before either is spent. Healing and support buffs retain their normal costs. Only combat actions
 increase round counters. The timeline shows the current encounter round, reset
 to 1 at every combat start. The separate Stats window shows cumulative combat
 rounds and successful exploration steps; turns, blocked moves, casts, waits,
@@ -117,6 +117,10 @@ Targeted AoEs use compact or wide circular areas (up to five tiles across each a
 Higher tiers offer both compact, powerful attacks and wider, weaker variants.
 The skill menu remembers each character’s last selected skill across targeting
 cancellation and reopening, and stores the choice in saves.
+
+Self-centered spells now include Flame Nova, Frost Nova, Storm Nova, and
+Healing Circle. Quickening Chorus also surrounds its caster. Guard reduces the
+next hit by 1 damage; Brace provides greater protection, even as a novice copy.
 
 ## Attack areas and entrances
 
@@ -133,16 +137,16 @@ companion AI turn toward their intended target before attacking.
 | Whirlwind | All eight surrounding tiles | Level 3 fighters |
 | Starlight I | A five-tile circle centered on a selected ground tile, within four walking steps | Mira at level 2 |
 
-Offensive AoEs hit enemies only; healing and buff AoEs affect allies only, relative
-to the caster. Neutral villagers are excluded from offensive AoEs. Single-tile
+Targeted and directional AoEs affect allies and enemies alike. Only self-centered
+AoEs filter attacks to enemies and healing/buffs to allies. Single-tile
 skills can affect either side. Fire I, Saint I and Heal I affect one chosen tile
 up to four tiles away; sword basics affect only the tile directly ahead.
 AoE classification uses the full shape even when walls clip its footprint.
 Skills cost resources once and grant practice once per cast, including empty
 casts. The gold cursor selects an aim point; amber tiles preview the footprint.
 Ground cursors move spatially with arrows, and skills work outside combat.
-Single-tile attacks on villagers trigger a warning without harming them or
-awarding rewards. Mira uses Burst against clusters in Support/Attack mode.
+Attacks on villagers trigger a warning without harming them or
+awarding rewards. Mira uses targeted blasts only when they will not hit allies.
 Aren learns these techniques using the usual prerequisites.
 
 Passages are two adjacent floor tiles recessed into the boundary walls, without
@@ -214,7 +218,7 @@ them immediately through the testing statue.
 | --- | --- | --- |
 | Haste | 3 MP | Single tile within 4; +4 Speed for 3 rounds |
 | Slow | 3 MP | Single tile within 4; −4 Speed for 3 rounds |
-| Quickening Chorus | 6 MP | five-tile allied circle within 4; +3 Speed for 3 rounds |
+| Quickening Chorus | 6 MP | five-tile allied circle around the caster; +3 Speed for 3 rounds |
 
 Copied versions scale with mastery. Chorus requires mastered Haste. A new
 speed effect replaces the existing one rather than stacking. Effects influence

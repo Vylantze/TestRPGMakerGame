@@ -130,7 +130,7 @@ test("Facing shapes rotate in every direction; sword cannot strike behind", () =
         assert.equal(R.footprint(s, s.aren, "whirlwind").length, 8);
     }
 });
-test("Area attacks hit only enemies in the hitbox, charge once, and practice once", () => {
+test("Area attacks filter only self-centered blasts, charge once, and practice once", () => {
     for (const id of ["thrust", "sweep", "whirlwind", "burst"]) {
         const s = R.create(); s.aren.x = 8; s.aren.y = 8; s.aren.direction = 6;
         s.knowledge[id] = { learned: true, practice: 0, observations: 3 };
@@ -142,7 +142,7 @@ test("Area attacks hit only enemies in the hitbox, charge once, and practice onc
         assert.equal(R.use(s, s.aren, id, id === "burst" ? center : foes[0]), true);
         assert.ok(foes.every(enemy => enemy.hp < 99));
         assert.equal(s.aren[pool], before - R.skills[id].cost);
-        assert.equal(s.knowledge[id].practice, 1); assert.equal(s.mira.hp, hp);
+        assert.equal(s.knowledge[id].practice, 1); if (id === "whirlwind") assert.equal(s.mira.hp, hp); else assert.ok(s.mira.hp < hp);
     }
 });
 test("Ground bursts work without an enemy at their center and respect walls", () => {
@@ -214,13 +214,13 @@ test("Single-tile spells aim at either side at range, including healing enemies"
     R.use(s, s.aren, "mend", foe); assert.equal(foe.hp, 12);
     R.use(s, s.aren, "spark", foe); assert.equal(foe.hp, 12 - R.skills.spark.power);
 });
-test("AoE faction rules apply to enemy damage, healing, buffs and revival", () => {
+test("Self-centered AoEs filter healing, buffs and revival", () => {
     const s = R.create(); Object.assign(s.aren, { x: 8, y: 8 }); Object.assign(s.mira, { x: 9, y: 8, hp: 10 });
     const foe = { id: "enemy0", name: "Dummy", x: 9, y: 7, hp: 50, maxHp: 50, level: 1, mp: 99, sp: 99 };
     R.area(s).enemies = [foe];
     assert.deepEqual(R.affected(s, foe, "burst", s.aren).map(u => u.id), ["aren", "mira"]);
     for (const kind of ["heal", "guard", "revive"]) {
-        R.skills.testSupport = { name: "Test support", kind, shape: "burst", range: 4, pool: "mp", cost: 0, power: 5 };
+        R.skills.testSupport = { name: "Test support", kind, shape: "around", circular: true, range: 0, pool: "mp", cost: 0, power: 5 };
         try {
             if (kind === "revive") { s.mira.hp = 0; foe.hp = 0; }
             const targets = R.affected(s, s.aren, "testSupport", s.aren);
@@ -232,13 +232,13 @@ test("AoE faction rules apply to enemy damage, healing, buffs and revival", () =
         } finally { delete R.skills.testSupport; }
     }
 });
-test("Offensive AoEs ignore villagers even when walls clip the hitbox", () => {
+test("Targeted AoEs can hit villagers; self areas retain filtering", () => {
     const s = R.create(); Object.assign(s.aren, { x: 8, y: 6, direction: 8 });
-    assert.equal(R.affected(s, s.aren, "burst", { x: 8, y: 5 }).length, 0);
+    assert.ok(R.affected(s, s.aren, "burst", { x: 8, y: 5 }).some(u => u.villager));
     assert.ok(R.affected(s, s.aren, "spark", { x: 8, y: 5 }).some(u => u.villager));
     Object.assign(s.aren, { x: 6, y: 2, direction: 4 }); Object.assign(s.mira, { x: 5, y: 1 });
     assert.equal(R.footprint(s, s.aren, "sweep").length, 1);
-    assert.deepEqual(R.affected(s, s.aren, "sweep"), []);
+    assert.ok(R.affected(s, s.aren, "sweep").includes(s.mira));
 });
 test("Both tiles of every wall opening transfer automatically", () => {
     for (const [mapId, map] of Object.entries(R.maps)) for (const link of [map.exit, map.back].filter(Boolean)) {
@@ -257,12 +257,12 @@ test("Offensive AoEs charge both pools once, including empty and wall-clipped ca
     for (const id of ["thrust", "sweep", "whirlwind", "burst"]) {
         const s = R.create(); s.godMode = true; s.aren.direction = 8;
         const costs = R.skillCosts(id), other = R.skills[id].pool === "sp" ? "mp" : "sp";
-        assert.equal(costs[other], 1);
+        assert.equal(costs[other], id === "whirlwind" ? 2 : 1);
         s.aren[other] = 0;
         const before = [s.aren.sp, s.aren.mp, s.turn];
         assert.equal(R.cast(s, id, { x: 8, y: 8 }), false);
         assert.deepEqual([s.aren.sp, s.aren.mp, s.turn], before);
-        s.aren[other] = 1;
+        s.aren[other] = costs[other];
         assert.ok(R.cast(s, id, { x: 8, y: 8 }));
         assert.equal(s.aren[other], 0); assert.equal(s.turn, 0);
     }
