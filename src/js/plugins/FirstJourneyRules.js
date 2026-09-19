@@ -6,29 +6,38 @@
  */
 (() => {
     "use strict";
-    const skills = {
-        haste: { name: "Haste", pool: "mp", cost: 3, power: 4, range: 4, kind: "speed", duration: 3 },
-        slow: { name: "Slow", pool: "mp", cost: 3, power: -4, range: 4, kind: "speed", duration: 3 },
-        quickening: { name: "Quickening Chorus", pool: "mp", cost: 6, power: 3, range: 4, shape: "burst", kind: "speed", duration: 3, prerequisite: "haste" },
-        cut: { name: "Sword Cut", pool: "sp", cost: 1, power: 7, range: 1, shape: "front", kind: "damage", basic: true },
-        spark: { name: "Ember", pool: "mp", cost: 1, power: 6, range: 4, kind: "damage", basic: true },
-        mend: { name: "Mend", pool: "mp", cost: 3, power: 15, range: 4, kind: "heal" },
-        light: { name: "Light Lance", pool: "mp", cost: 2, power: 10, range: 4, kind: "damage" },
-        jab: { name: "Quick Jab", pool: "sp", cost: 2, power: 10, range: 1, shape: "front", kind: "damage" },
-        thrust: { name: "Piercing Thrust", pool: "sp", cost: 3, power: 10, range: 2, shape: "line", kind: "damage" },
-        whirlwind: { name: "Whirlwind", pool: "sp", cost: 4, power: 11, range: 1, shape: "around", kind: "damage", prerequisite: "jab" },
-        burst: { name: "Radiant Burst", pool: "mp", cost: 5, power: 10, range: 4, shape: "burst", kind: "damage", prerequisite: "light" },
-        brace: { name: "Brace", pool: "sp", cost: 2, power: 3, range: 0, kind: "guard" },
-        sweep: { name: "Heavy Swing", pool: "sp", cost: 4, power: 19, range: 1, shape: "arc", kind: "damage", prerequisite: "jab" },
-        greaterMend: { name: "Greater Mend", pool: "mp", cost: 5, power: 28, range: 4, kind: "heal", prerequisite: "mend" },
-        revive: { name: "Revive", pool: "mp", cost: 8, power: 20, range: 4, kind: "revive", prerequisite: "mend" }
-    };
+    const nodeRuntime = typeof DataManager === "undefined" && typeof module !== "undefined" && module.exports;
+    const skills = {};
+    function loadSkills(data) {
+        for (const key of Object.keys(skills)) delete skills[key];
+        Object.assign(skills, data);
+        if (!nodeRuntime) extendJobs();
+    }
+    if (nodeRuntime) loadSkills(require("../../data/TestSkills.json"));
+    else {
+        globalThis.$dataTestSkills = null;
+        DataManager._databaseFiles.push({ name: "$dataTestSkills", src: "TestSkills.json" });
+        const onLoad = DataManager.onLoad;
+        DataManager.onLoad = function(object) {
+            onLoad.call(this, object);
+            if (object === globalThis.$dataTestSkills) loadSkills(object);
+        };
+    }
     // Shared job tables apply to companions and humanoid enemies.
     const jobs = {
+        mage: [{ level: 1, skill: "spark" }],
         supporter: [{ level: 1, skill: "spark" }, { level: 1, skill: "haste" }, { level: 1, skill: "slow" }, { level: 3, skill: "quickening" }],
         priestess: [{ level: 1, skill: "mend" }, { level: 1, skill: "light" }, { level: 2, skill: "burst" }, { level: 3, skill: "greaterMend" }, { level: 5, skill: "revive" }],
         fighter: [{ level: 1, skill: "jab" }, { level: 2, skill: "brace" }, { level: 2, skill: "thrust" }, { level: 3, skill: "sweep" }, { level: 3, skill: "whirlwind" }]
     };
+    function extendJobs() {
+        for (const [id, skill] of Object.entries(skills)) {
+            const job = skill.pool === "sp" ? "fighter" : ["heal", "revive"].includes(skill.kind) || /Saint|Starlight/.test(skill.name) ? "priestess" : skill.kind === "speed" ? "supporter" : "mage";
+            jobs[job] ||= [];
+            if (!Object.values(jobs).some(entries => entries.some(entry => entry.skill === id)) && !skill.basic) jobs[job].push({ level: 3 + skill.tier * 2, skill: id });
+        }
+    }
+    if (nodeRuntime) extendJobs();
     const maps = {
         1: { name: "Briar Glen", subtitle: "A coming-of-age journey", grid: [
             "###################", "#.................#", "#..###.....###....#", "#..###.....###....#",
@@ -69,8 +78,8 @@
         return unit;
     }
     function create() {
-        return { version: 1, mapId: 1, aren: actor("aren", 8, 7), mira: actor("mira", 7, 7), controlled: "aren", direct: false, round: null, mode: "Support", turn: 0, combat: false,
-            knowledge: {}, equipped: [], inventory: { ration: 3, hp: 2, sp: 1, mp: 1 }, shopStock: { hp: 2, sp: 1, mp: 1 }, gold: 30, areas: {}, log: [], checkpoints: [], quest: "journey", defeated: 0 };
+        return { version: 1, mapId: 1, aren: actor("aren", 8, 7), mira: actor("mira", 7, 7), controlled: "aren", direct: false, round: null, mode: "Support", turn: 0, totalRounds: 0, explorationSteps: 0, combat: false,
+            knowledge: { cut: { learned: true, observations: 3, practice: 0 }, spark: { learned: true, observations: 3, practice: 0 } }, equipped: [], inventory: { ration: 3, hp: 2, sp: 1, mp: 1 }, shopStock: { hp: 2, sp: 1, mp: 1 }, gold: 30, areas: {}, log: [], checkpoints: [], quest: "journey", defeated: 0 };
     }
     function log(state, text) { state.log.push(text); state.log = state.log.slice(-40); }
     function area(state) {
@@ -125,6 +134,7 @@
         const active = enemies(state).some(enemy => enemy.active);
         if (active !== state.combat) {
             state.combat = active;
+            if (active) state.turn = 0;
             log(state, active ? "Combat begins. Each action advances one turn." : "Combat ends. You can change your loadout.");
             checkpoint(state, active ? "combat-start" : "combat-end");
         }
@@ -243,7 +253,7 @@
             }
             if (skill.kind === "speed") {
                 const amount = Math.sign(skill.power) * Math.max(1, Math.round(Math.abs(skill.power) * factor));
-                target.speedEffect = { amount, remaining: skill.duration, applied: state.turn };
+                target.speedEffect = { amount, remaining: skill.duration, applied: state.totalRounds };
                 log(state, user.name + " uses " + skill.name + ": " + target.name + " Speed " + (amount > 0 ? "+" : "") + amount + " for " + skill.duration + " rounds.");
             } else if (skill.kind === "heal" || skill.kind === "revive") {
                 const amount = Math.min((target.maxHp || (target.villager ? 1 : maxStats(target).hp)) - target.hp, power);
@@ -271,7 +281,7 @@
             }
             if (globalThis.FirstJourneyRules.onSkill) globalThis.FirstJourneyRules.onSkill({ mapId: state.mapId, skill: id, user: { ...user }, target: { ...target }, change: target.hp - beforeHp });
         }
-        if (user.id === "aren" && !skill.basic && state.knowledge[id]?.learned && !state.godMode) {
+        if (user.id === "aren" && state.knowledge[id]?.learned && !state.godMode) {
             state.knowledge[id].practice += 1;
             for (const key of Object.keys(state.knowledge)) unlock(state, key);
         }
@@ -394,6 +404,7 @@
             unit.x = other.x; unit.y = other.y;
             faceToward(other, previous); Object.assign(other, previous);
         } else if (!step(state, unit, dx, dy)) return false;
+        if (!state.combat) state.explorationSteps++;
         const portal = [maps[state.mapId].exit, maps[state.mapId].back].filter(Boolean).find(link => passageTiles(link).some(tile => unit.x === tile.x && unit.y === tile.y));
         if (portal) { state.round = null; travel(state, portal[2], portal[3], portal[4]); }
         return true;
@@ -427,7 +438,7 @@
             }
         }
         combatCheck(state);
-        if (state.combat) state.turn++;
+        if (state.combat) { state.turn++; state.totalRounds++; }
         const previous = { x: state.aren.x, y: state.aren.y };
         const entries = [{ unitId: "aren", action }, { unitId: "mira", action: miraAction || { type: action.type === "move" ? "follow" : "auto", target: previous } }, ...enemies(state).filter(e => e.active).map(e => ({ unitId: e.id, action: { type: "enemy" } }))].filter(entry => [...party(state), ...area(state).enemies].find(unit => unit.id === entry.unitId)?.hp > 0);
         if (!state.combat) {
@@ -454,7 +465,7 @@
         if (round.index >= round.entries.length) {
             state.round = null;
             for (const unit of [...party(state), ...area(state).enemies]) {
-                if (unit.speedEffect && unit.speedEffect.applied < state.turn && --unit.speedEffect.remaining <= 0) unit.speedEffect = null;
+                if (unit.speedEffect && unit.speedEffect.applied < state.totalRounds && --unit.speedEffect.remaining <= 0) unit.speedEffect = null;
             }
             endRound(state); return false;
         }

@@ -91,7 +91,7 @@ a click select any actor and highlight their location, panning the camera
 when needed. Enter/Esc returns to commands without spending an action.
 
 Mira's **Support** mode heals allies below 65% HP, then attacks while retaining
-some MP. **Attack** prioritizes Light Lance. **Guard** holds position, heals
+some MP. **Attack** prioritizes Saint I. **Guard** holds position, heals
 when possible, and reduces the next incoming hit. **Follow** spends no
 resources. **Conserve** follows and heals but does not cast offensive magic.
 In combat with direct mode enabled, Aren remains the leader and Mira receives a command after each
@@ -108,8 +108,10 @@ resource: physical areas require 1 MP and magical areas require 1 SP. This
 applies to party and enemy attacks, even empty or wall-clipped casts. Both
 pools must be sufficient; costs are shown together in skill selection.
 Healing and support buffs retain their normal costs. Only combat actions
-increase the cumulative round counter, shown on the combat timeline.
-Exploration neither increases nor displays that counter.
+increase round counters. The timeline shows the current encounter round, reset
+to 0 at every combat start. The separate Stats window shows cumulative combat
+rounds and successful exploration steps; turns, blocked moves, casts, waits,
+and follower steps do not add exploration steps.
 
 ## Attack areas and entrances
 
@@ -124,11 +126,11 @@ companion AI turn toward their intended target before attacking.
 | Piercing Thrust | Both tiles directly ahead | Level 2 fighters |
 | Heavy Swing | Three tiles across in front, rotated with facing | Level 3 fighters |
 | Whirlwind | All eight surrounding tiles | Level 3 fighters |
-| Radiant Burst | A 3×3 square centered on a selected ground tile, within four walking steps | Mira at level 2 |
+| Starlight I | A 3×3 square centered on a selected ground tile, within four walking steps | Mira at level 2 |
 
 Offensive AoEs hit enemies only; healing and buff AoEs affect allies only, relative
 to the caster. Neutral villagers are excluded from offensive AoEs. Single-tile
-skills can affect either side. Ember, Light Lance and Mend affect one chosen tile
+skills can affect either side. Fire I, Saint I and Heal I affect one chosen tile
 up to four tiles away; sword basics affect only the tile directly ahead.
 AoE classification uses the full shape even when walls clip its footprint.
 Skills cost resources once and grant practice once per cast, including empty
@@ -156,7 +158,7 @@ is saved and an interaction creates an autosave.
 
 ## Resources and progression
 
-- Aren starts with Sword Cut (1 SP) and Ember (1 MP). They never occupy copied
+- Aren starts with Sword Cut (1 SP) and Fire I (1 MP). They never occupy copied
   skill slots. He has no free attack when the corresponding resource is empty.
 - Town rest is free. Both shrine camps consume one ration to fully restore
   the party's HP, SP and MP, including downed members. Rest is unavailable in
@@ -164,8 +166,8 @@ is saved and an interaction creates an autosave.
 - Rations cost 6 gold. HP/SP/MP potions cost 18/22/24 gold and have limited town
   stock of 2/1/1. Potions restore 25 HP or 12 SP/MP and consume an action (a counted round only in combat).
   They do not revive a downed member. Waiting and leveling do not heal.
-- Mira starts with Mend and Light Lance; Radiant Burst arrives at level 2,
-  Greater Mend at level 3 and
+- Mira starts with Heal I and Saint I; Starlight I arrives at level 2,
+  Heal II at level 3 and
   Revive at level 5. The priestess and fighter job tables are shared with
   humanoid enemies. Fighters learn Quick Jab at level 1, Brace and Piercing
   Thrust at level 2, and Heavy Swing and Whirlwind at level 3.
@@ -174,9 +176,9 @@ is saved and an interaction creates an autosave.
   block observation; Aren must be conscious. Three points unlock a basic skill.
 - Advanced skills accrue 0.05 observation points per witnessed use until their
   prerequisite reaches 100% mastery. Progress is retained and checked again
-  when prerequisites improve. Heavy Swing and Whirlwind require Quick Jab; Radiant Burst requires Light
-  Lance; Greater Mend and
-  Revive require Mend.
+  when prerequisites improve. Heavy Swing and Whirlwind require Quick Jab; Starlight I requires Light
+  Lance; Heal II and
+  Revive require Heal I.
 - Understanding and proficiency are intentionally combined for this prototype.
   Using a copied skill adds 1 practice point; witnessing it after unlocking adds
   0.25. At 0/6/12/18 practice points its effectiveness is
@@ -198,7 +200,7 @@ Aren starts with Speed 10, Mira with 8, ordinary goblins with 7, goblin
 supporters with 11, and the boss with 9. Each level adds 1 Speed. Speed does
 not grant extra actions or change walking animation speed; it determines order.
 
-Supporters learn Ember, Haste and Slow at level 1, then Quickening Chorus at
+Supporters learn Fire I, Haste and Slow at level 1, then Quickening Chorus at
 level 3. A goblin chanter on the shrine approach demonstrates these techniques.
 Mira retains her Priestess job. Aren can copy supporter skills normally or try
 them immediately through the testing statue.
@@ -235,7 +237,7 @@ in this act. Additional towns will need a stored last-visited-town destination.
 
 ## Implementation and editing
 
-- `js/plugins/FirstJourneyRules.js`: plain-data expedition state, skills, jobs,
+- `js/plugins/FirstJourneyRules.js`: plain-data expedition state, skill loading, jobs,
   maps, pathfinding, resource rules, observations, turns and encounters.
 - `js/plugins/FirstJourney.js`: MZ map sprites, keyboard/menu UI, HUD, dialogue,
   shopping and engine save integration.
@@ -273,7 +275,7 @@ a complete manual playthrough before distribution.
 
 Verified on 19 September 2026: 29 rules checks and 12 sequential-turn checks
 pass. The baseline expedition clears both shrine maps and returns to the guild
-in 23 combat rounds, at level 3 with one ration left and no defeats. The browser run
+in 20 combat rounds and 108 exploration steps, at level 3 with one ration left and no defeats. The browser run
 passes new-game startup, movement, one-third-tile camera scrolling, menus, skill
 hover, direct companion commands and cancellation, combat menus, timeline
 inspection, directional aiming, targeting, combat checkpoints,

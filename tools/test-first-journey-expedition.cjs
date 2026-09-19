@@ -55,4 +55,4 @@ walk({ x: 8, y: 5 }); assert.equal(R.interact(s), "guild");
 assert.equal(s.defeated, 0);
 assert.ok(R.learned(s, "light"));
 console.log("PASS complete expedition and return to guild, using legal movement, starting attacks, potions and ration rests.");
-console.log(JSON.stringify({ turns: s.turn, level: s.aren.level, remainingRations: s.inventory.ration, knowledge: s.knowledge }, null, 2));
+console.log(JSON.stringify({ combatRounds: s.totalRounds, explorationSteps: s.explorationSteps, level: s.aren.level, remainingRations: s.inventory.ration, knowledge: s.knowledge }, null, 2));

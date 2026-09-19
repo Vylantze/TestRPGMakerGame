@@ -260,8 +260,8 @@ const server = http.createServer((req, res) => {
             s.controlled = "aren"; SceneManager._scene._journeyPendingAction = { type: "wait" }; s.mira.level = 2; s.mira.mp = 29;
             s.mira.x = 8; s.mira.y = 7; s.aren.x = 7; s.aren.y = 7;
             R.area(s).enemies = R.area(s).enemies.slice(0, 2);
-            Object.assign(R.area(s).enemies[0], { x: 9, y: 8, hp: 10 });
-            Object.assign(R.area(s).enemies[1], { x: 8, y: 8, hp: 10 });
+            Object.assign(R.area(s).enemies[0], { x: 9, y: 8, hp: 6 });
+            Object.assign(R.area(s).enemies[1], { x: 8, y: 8, hp: 6 });
             SceneManager._scene.syncJourney();
             SceneManager._scene.beginJourneyTargeting("burst");
         });
@@ -409,6 +409,21 @@ const server = http.createServer((req, res) => {
         await press("Space");
         assert.equal(await page.evaluate(() => $gameSystem._firstJourney.direct), true, "Combat command preference persists");
         assert.equal(await page.evaluate(() => !!SceneManager._scene._journeyPendingAction), false, "Returning to exploration restores Aren-only control");
+        await press("Escape");
+        await press("ArrowDown"); await press("ArrowDown"); await press("Enter");
+        assert.deepEqual(await page.evaluate(() => SceneManager._scene._journeyChoices._entries.map(e => e.label)), await page.evaluate(() => ["Adventure Stats", "Total combat rounds: " + $gameSystem._firstJourney.totalRounds, "Exploration steps: " + $gameSystem._firstJourney.explorationSteps, "Back"]));
+        await page.screenshot({ path: path.join(output, "adventure-stats.png") });
+        await press("Escape"); await press("Escape");
+        const originalKnowledge = await page.evaluate(() => JSON.parse(JSON.stringify($gameSystem._firstJourney.knowledge)));
+        await page.evaluate(() => {
+            const s = $gameSystem._firstJourney;
+            ["mend", "light", "jab", "thrust"].forEach((id, i) => s.knowledge[id] = { learned: true, observations: 3, practice: [0, 6, 12, 18][i] });
+            SceneManager._scene.journal();
+        });
+        assert.equal(await page.evaluate(() => SceneManager._scene._journeyChoices._entries.filter(e => e.journalId).length), 74);
+        await page.screenshot({ path: path.join(output, "journal-proficiency.png") });
+        await page.evaluate(knowledge => { $gameSystem._firstJourney.knowledge = knowledge; }, originalKnowledge);
+        await press("Escape");
         await page.waitForTimeout(300);
         assert.deepEqual(errors, []);
         console.log("PASS MZ boot, new game, movement, all menus, direct companion commands, skill hover, combat menu, turn-order inspection, directional aiming, transfer, skill targeting, combat checkpoint, engine save/load, defeat return, rest, shopping and ending; no console errors.");

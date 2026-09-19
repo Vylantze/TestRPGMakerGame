@@ -72,9 +72,9 @@ members. The prototype implements Priestess, Fighter, and Supporter tables:
 
 | Job | Level 1 | Later techniques |
 | --- | --- | --- |
-| Priestess | Mend, Light Lance | Radiant Burst at 2; Greater Mend at 3; Revive at 5 |
+| Priestess | Heal I, Saint I | Starlight I at 2; Heal II at 3; Revive at 5 |
 | Fighter | Quick Jab | Brace and Piercing Thrust at 2; Heavy Swing and Whirlwind at 3 |
-| Supporter | Ember, Haste, Slow | Quickening Chorus at 3 |
+| Supporter | Fire I, Haste, Slow | Quickening Chorus at 3 |
 
 Mira remains a Priestess. A goblin chanter in the shrine is a Supporter, providing
 a source of speed manipulation for Aren to observe. Later heroines, their names,
@@ -106,7 +106,7 @@ them. Both ally and enemy uses can count. Walls block observation. Using his own
 copy develops practice rather than counting as another external observation.
 
 Advanced skills have prerequisites. Revive, for example, requires mastered
-Mend. Aren still gains a small, non-zero amount of progress from seeing a locked
+Heal I. Aren still gains a small, non-zero amount of progress from seeing a locked
 advanced skill: the prototype uses 0.05 observation points per use rather than
 the normal 1 point. Saved progress becomes useful when the prerequisite is met.
 
@@ -128,13 +128,13 @@ point, so initial learning requires 300 units and mastery requires 1,800 units.
 Aren can equip a limited number of copied skills, initially two. Capacity grows
 by one slot every two levels. The player may change the loadout only outside
 combat. Learning a technique does not automatically equip it. His starting
-**Sword Cut** and **Ember** are always available and use no copied-skill slots.
+**Sword Cut** and **Fire I** are always available and use no copied-skill slots.
 
 ## Resources and recovery
 
 Characters have **Hit Points (HP)**, **Stamina (SP)**, and **Mana (MP)**.
 Physical techniques consume SP and spells consume MP. Even the fallback basics
-cost resources: Sword Cut costs 1 SP, and Ember costs 1 MP. There is no free
+cost resources: Sword Cut costs 1 SP, and Fire I costs 1 MP. There is no free
 attack when the relevant pool is empty. Resource exhaustion is an intended
 expedition constraint rather than an exception to the rules.
 
@@ -186,11 +186,11 @@ magic continues to move its cursor instead.
 | Shape | Example | Behavior |
 | --- | --- | --- |
 | One tile ahead | Sword Cut, Quick Jab | Facing determines the affected square |
-| One selected tile at range | Ember, Light Lance, Mend | Aim within four grid steps and line of sight |
+| One selected tile at range | Fire I, Saint I, Heal I | Aim within four grid steps and line of sight |
 | Two tiles ahead | Piercing Thrust | Hits along the facing direction |
 | Three tiles across ahead | Heavy Swing | Rotates the row with the caster's facing |
 | Surrounding area | Whirlwind | Hits the eight neighboring tiles |
-| Area around a selected tile | Radiant Burst | A 3×3 footprint centered within four steps |
+| Area around a selected tile | Starlight I | A 3×3 footprint centered within four steps |
 
 Offensive AoEs affect enemies only, relative to the caster. Healing and buff AoEs
 affect allies only. Neutral villagers are excluded from offensive AoEs.
@@ -213,8 +213,10 @@ resource: physical areas require 1 MP and magical areas require 1 SP. This
 applies to party and enemy attacks, even empty or wall-clipped casts. Both
 pools must be sufficient; costs are shown together in skill selection.
 Healing and support buffs retain their normal costs. Only combat actions
-increase the cumulative round counter, shown on the combat timeline.
-Exploration neither increases nor displays that counter.
+increase round counters. The timeline shows the current encounter round, reset
+to 0 at every combat start. The separate Stats window shows cumulative combat
+rounds and successful exploration steps; turns, blocked moves, casts, waits,
+and follower steps do not add exploration steps.
 
 ## Sequential turns, Speed, and companion commands
 

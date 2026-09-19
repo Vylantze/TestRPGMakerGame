@@ -187,7 +187,7 @@ test("God-mode statue temporarily exposes all skills and preserves the normal lo
     assert.equal(resumed.godMode, true);
     resumed.aren.direction = 6;
     assert.equal(R.cast(resumed, "whirlwind"), true);
-    assert.deepEqual(resumed.knowledge, {}); assert.deepEqual(resumed.equipped, []);
+    assert.deepEqual(resumed.knowledge, R.create().knowledge); assert.deepEqual(resumed.equipped, []);
     R.toggleGodMode(resumed);
     assert.deepEqual(R.availableSkills(resumed, resumed.aren), ["cut", "spark"]);
     assert.equal(R.cast(resumed, "whirlwind"), false);
@@ -212,7 +212,7 @@ test("Single-tile spells aim at either side at range, including healing enemies"
     }
     const hp = s.mira.hp; R.use(s, s.aren, "spark", s.mira); assert.ok(s.mira.hp < hp);
     R.use(s, s.aren, "mend", foe); assert.equal(foe.hp, 12);
-    R.use(s, s.aren, "spark", foe); assert.equal(foe.hp, 6);
+    R.use(s, s.aren, "spark", foe); assert.equal(foe.hp, 12 - R.skills.spark.power);
 });
 test("AoE faction rules apply to enemy damage, healing, buffs and revival", () => {
     const s = R.create(); Object.assign(s.aren, { x: 8, y: 8 }); Object.assign(s.mira, { x: 9, y: 8, hp: 10 });

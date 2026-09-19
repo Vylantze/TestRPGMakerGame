@@ -39,8 +39,22 @@ resource: physical areas require 1 MP and magical areas require 1 SP. This
 applies to party and enemy attacks, even empty or wall-clipped casts. Both
 pools must be sufficient; costs are shown together in skill selection.
 Healing and support buffs retain their normal costs. Only combat actions
-increase the cumulative round counter, shown on the combat timeline.
-Exploration neither increases nor displays that counter.
+increase round counters. The timeline shows the current encounter round, reset
+to 0 at every combat start. The separate Stats window shows cumulative combat
+rounds and successful exploration steps; turns, blocked moves, casts, waits,
+and follower steps do not add exploration steps.
+
+## Skill data and Stats
+
+The field menu’s **Stats** item opens lifetime combat rounds and exploration
+steps. The skill journal displays tier-coloured proficiency bars.
+
+`src/data/TestSkills.json` contains the current 74-skill catalogue;
+`src/data/Skills.json` is its generated RPG Maker editor export. The original
+database is archived in `Addons/FirstJourneyBackup/SkillArchive/`. See
+[skill catalogue and tuning](docs/SKILL_CATALOGUE.md) for sources, prerequisites,
+balance, omissions and regeneration instructions. Start a New Game for the
+new counters and catalogue; legacy-save migration remains unsupported.
 
 ## Documentation
 
@@ -100,10 +114,12 @@ is the game runtime configuration.
 ```powershell
 # Rebuild the three editor-readable maps and related generated data.
 node tools/build-first-journey.cjs
+node tools/build-test-skills.cjs
 
 # Pure Node.js rules, sequential turns, and complete expedition checks.
 node tools/test-first-journey.cjs
 node tools/test-first-journey-turns.cjs
+node tools/test-first-journey-catalogue.cjs
 node tools/test-first-journey-expedition.cjs
 
 # Real MZ browser playtest, including input, UI, targeting, and save/load.

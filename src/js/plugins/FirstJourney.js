@@ -70,6 +70,22 @@
         itemHeight() { return 36; }
         resetFontSettings() { super.resetFontSettings(); this.contents.fontSize = 20; }
         makeCommandList() { for (let i = 0; i < this._entries.length; i++) this.addCommand(this._entries[i].label, String(i), this._entries[i].enabled !== false); }
+        drawItem(index) {
+            const entry = this._entries[index];
+            if (!entry.journalId) return super.drawItem(index);
+            const rect = this.itemLineRect(index), id = entry.journalId;
+            const known = R.learned(state(), id), progress = known ? state().knowledge[id]?.practice || 0 : 0;
+            const tier = R.mastery(state(), id), colors = ["#8995a7", "#48bd76", "#478ce0", "#efc45a"];
+            const names = ["Novice", "Practiced", "Adept", "Master"];
+            this.resetTextColor(); this.changePaintOpacity(true);
+            this.contents.fillRect(rect.x, rect.y + 8, 104, 20, "#18232f");
+            this.contents.fillRect(rect.x, rect.y + 8, Math.round(104 * Math.min(1, progress / 18)), 20, colors[tier]);
+            this.contents.fontSize = 13;
+            this.drawText(known ? Math.min(100, Math.floor(progress / 18 * 100)) + "% " + names[tier] : "Unlearned", rect.x, rect.y, 104, "center");
+            this.contents.fontSize = 18;
+            this.drawText(entry.label, rect.x + 114, rect.y, rect.width - 114);
+            this.resetFontSettings();
+        }
         processOk() {
             if (!this.isCurrentItemEnabled()) { this.playBuzzerSound(); return; }
             this.playOkSound(); this.updateInputData(); this.deactivate();
@@ -178,17 +194,17 @@
     Scene_Map.prototype.journal = function() {
         const s = state();
         const entries = [{ label: (s.godMode ? "GOD MODE: all skills available | " : "") + "Copied slots: " + s.equipped.length + "/" + R.slots(s) + (s.combat ? " — locked during combat" : " — select a learned skill to equip"), enabled: false }];
-        for (const id of Object.keys(R.skills).filter(key => !R.skills[key].basic)) {
+        for (const id of Object.keys(R.skills)) {
             const skill = R.skills[id], k = s.knowledge[id];
             const text = R.progressText(s, id);
-            entries.push({ label: (s.equipped.includes(id) ? "[E] " : "      ") + skill.name + "  |  " + text, enabled: !s.combat && !!k?.learned, run: () => { if (!R.equip(s, id)) R.log(s, "No free skill slots. Unequip another skill first."); this.journal(); } });
+            entries.push({ journalId: id, label: (skill.basic ? "[Basic] " : s.equipped.includes(id) ? "[E] " : "") + skill.name + "  |  " + text, enabled: !skill.basic && !s.combat && !!k?.learned, run: () => { if (!R.equip(s, id)) R.log(s, "No free skill slots. Unequip another skill first."); this.journal(); } });
             if (skill.prerequisite && !R.ready(s, id)) entries.push({ label: "       Requires " + R.skills[skill.prerequisite].name + " at 100% mastery; locked observations +5 units", enabled: false });
         }
         this.choices(entries, null, 680);
     };
     Scene_Map.prototype.behavior = function() {
         const s = state();
-        const modes = { Support: "heal, then attack if MP permits", Attack: "prioritize Light Lance", Guard: "hold position; heal and reduce damage", Follow: "follow without spending resources", Conserve: "heal when needed; no offensive spells" };
+        const modes = { Support: "heal, then attack if MP permits", Attack: "prioritize Saint I", Guard: "hold position; heal and reduce damage", Follow: "follow without spending resources", Conserve: "heal when needed; no offensive spells" };
         this.choices(Object.entries(modes).map(([mode, description]) => ({ label: (s.mode === mode ? "[x] " : "[ ] ") + mode + " — " + description, run: () => { s.mode = mode; s.direct = false; this.closeJourneyChoices(); R.log(s, "Mira behavior: " + mode + "."); } })));
     };
     Scene_Map.prototype.items = function() {
@@ -201,10 +217,20 @@
         s.shopStock = s.shopStock || { hp: 2, sp: 1, mp: 1 };
         this.choices([{ label: "Provisioner • " + s.gold + " gold • potions have limited stock", enabled: false }, ...[["ration", 6], ["hp", 18], ["sp", 22], ["mp", 24]].map(([id, price]) => ({ label: (id === "ration" ? "Ration" : id.toUpperCase() + " potion") + "   " + price + " gold   (owned " + s.inventory[id] + ")" + (id === "ration" ? "" : "   stock " + s.shopStock[id]), enabled: s.gold >= price && (id === "ration" || s.shopStock[id] > 0), run: () => { s.gold -= price; s.inventory[id]++; if (id !== "ration") s.shopStock[id]--; this.shop(); } }))]);
     };
+    Scene_Map.prototype.statsMenu = function() {
+        const s = state();
+        this.choices([
+            { label: "Adventure Stats", enabled: false },
+            { label: "Total combat rounds: " + s.totalRounds, enabled: false },
+            { label: "Exploration steps: " + s.explorationSteps, enabled: false },
+            { label: "Back", run: () => this.fieldMenu() }
+        ], () => this.fieldMenu(), 420);
+    };
     Scene_Map.prototype.fieldMenu = function() {
         this.choices([
             { label: "Party", run: () => this.partyMenu() },
             { label: "Options", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Options); } },
+            { label: "Stats", run: () => this.statsMenu() },
             { label: "Skills / attack [A]", run: () => this.skillMenu() },
             { label: "Skill journal [K]", run: () => this.journal() },
             { label: "Potions [I]", run: () => this.items() },
@@ -214,7 +240,7 @@
             { label: "Load", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Load); } },
             { label: "Controls and rules", run: () => { this.closeJourneyChoices(); this.say([
                 "Tap to turn or step forward; hold to walk. Space: wait. A: skills.\nChoose a skill, aim its hitbox, then confirm. Empty casts work.\nTab: Mira commands • C: behavior • K: journal • I: potions",
-                "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Sword Cut costs SP; Ember costs MP.",
+                "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Sword Cut costs SP; Fire I costs MP.",
                 "Witness a basic skill 3 times to copy its form at 60% power.\nPractice raises it at 6/12/18 points to 80/100/120%.\nDebug units: watching +25; using +100.",
                 "Advanced skills need their prerequisite at 100% mastery.\nUntil then each observation adds 5/300 learning units.\nLoadouts change outside combat; starting attacks use no slots.",
                 "Combat actions resolve in descending Speed order.\nCancel from combat commands enters persistent Move.\nEnter reopens commands; Esc in Move opens the normal menu.",
@@ -235,7 +261,7 @@
                 this.say(["Steward: The shrine road is safe again. A fine first test!\nHere is your reward: 40 gold. You are adventurers now.", "Mira: You copied their movements, but made them your own.\nAren: There is still so much I do not understand.\nOur journey has only just begun. — Prototype complete —"]);
                 save("act-complete");
             } else if (s.quest === "complete") this.say(["Steward: Well done, you two. Rest and prepare for the road.\nYou can continue exploring and practicing your skills."]);
-            else this.say(["Steward: Goblins have nested in the abandoned shrine.\nClear their lookout posts and drive out their leader.\nTake the eastern road. This is your first adventurers' test.", "Mira: I know Mend and Light Lance. Watch carefully!\nWe have three rations; camp only at marked rest points.\nTown lodging is free, and the provisioner sells supplies."]);
+            else this.say(["Steward: Goblins have nested in the abandoned shrine.\nClear their lookout posts and drive out their leader.\nTake the eastern road. This is your first adventurers' test.", "Mira: I know Mend and Saint I. Watch carefully!\nWe have three rations; camp only at marked rest points.\nTown lodging is free, and the provisioner sells supplies."]);
         }
         this.syncJourney();
     };
