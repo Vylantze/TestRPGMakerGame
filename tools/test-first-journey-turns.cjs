@@ -91,10 +91,10 @@ test("An opening attack enters combat before resolving initiative", () => {
 });
 test("Mira's opening AoE beyond detection range also starts combat initiative", () => {
     const s = fixture(); s.aren.x = 6; s.aren.y = 7;
-    s.mira.x = 8; s.mira.y = 8; s.mira.level = 2;
-    Object.assign(R.enemies(s)[0], { x: 11, y: 11, active: false });
+    s.mira.x = 8; s.mira.y = 8; s.mira.level = 9; s.mira.job = "mage";
+    Object.assign(R.enemies(s)[0], { x: 11, y: 11, active: false, speed: 20 });
     R.combatCheck(s); assert.equal(s.combat, false);
-    R.submit(s, { type: "wait" }, { type: "skill", id: "burst", target: { x: 10, y: 10 } }, true);
+    R.submit(s, { type: "wait" }, { type: "skill", id: "source105", target: { x: 9, y: 11 } }, true);
     assert.ok(s.combat && s.round); assert.equal(s.round.entries[0].unitId, "enemy0");
     assert.equal(s.mira.mp, 26);
 });

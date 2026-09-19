@@ -105,6 +105,7 @@
     Scene_Map.prototype.beginJourneyTargeting = function(id) {
         this.closeJourneyChoices(); this._journeyPreview = null; this.ensureJourneyPresentation();
         const s = current(), unit = this.commandUnit(), skill = R.skills[id];
+        unit.lastSkill = id;
         const valid = R.targetOptions(s, unit, id);
         if (!valid.length) { R.log(s, "No valid targets for " + skill.name + ". No resources spent."); this.skillMenu(); return; }
         const enemy = R.offensive(id) ? R.enemies(s).find(target => R.canTarget(s, unit, id, target)) : R.party(s).filter(target => R.canTarget(s, unit, id, target)).sort((a, b) => a.hp / R.maxStats(a).hp - b.hp / R.maxStats(b).hp)[0] || unit;

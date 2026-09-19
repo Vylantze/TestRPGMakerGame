@@ -1,6 +1,6 @@
 const assert = require("node:assert/strict");
 const R = require("../src/js/plugins/FirstJourneyRules.js");
-const data = require("../src/data/TestSkills.json");
+const data = require("../src/js/plugins/Skills.json");
 const editor = require("../src/data/Skills.json");
 assert.deepEqual(R.skills, data);
 for (const [id, skill] of Object.entries(data)) {
@@ -25,16 +25,28 @@ R.move(s, 1, 0); R.finishTurn(s); R.cast(s, "spark", { x: 10, y: 7 });
 assert.deepEqual([s.explorationSteps, s.totalRounds, s.turn], [1, 0, 0]);
 const enemy = () => ({ id: "enemy0", name: "Dummy", x: 10, y: 7, hp: 999, maxHp: 999, sp: 0, mp: 0, level: 1, job: "fighter", step: 0, active: true });
 R.area(s).enemies = [enemy()]; R.combatCheck(s);
-assert.equal(s.turn, 0); R.finishTurn(s); R.finishTurn(s);
-assert.deepEqual([s.turn, s.totalRounds, s.explorationSteps], [2, 2, 1]);
+assert.equal(s.turn, 1); R.finishTurn(s); R.finishTurn(s);
+assert.deepEqual([s.turn, s.totalRounds, s.explorationSteps], [3, 2, 1]);
 s.aren.speedEffect = { amount: 4, remaining: 3, applied: s.totalRounds };
 R.area(s).enemies = []; R.combatCheck(s); R.move(s, 0, 1);
 R.area(s).enemies = [enemy()]; R.combatCheck(s);
-assert.deepEqual([s.turn, s.totalRounds, s.explorationSteps], [0, 2, 2]);
+assert.deepEqual([s.turn, s.totalRounds, s.explorationSteps], [1, 2, 2]);
 R.finishTurn(s); assert.equal(s.aren.speedEffect.remaining, 2);
 const restored = JSON.parse(JSON.stringify(s));
-assert.deepEqual([restored.turn, restored.totalRounds, restored.explorationSteps], [1, 3, 2]);
+assert.deepEqual([restored.turn, restored.totalRounds, restored.explorationSteps], [2, 3, 2]);
 for (let i = 0; i < 18; i++) { s.aren.mp = 99; R.use(s, s.aren, "spark", s.aren); s.aren.hp = 99; }
 assert.equal(R.mastery(s, "spark"), 3);
 assert.ok(R.ready(s, Object.keys(data).find(id => data[id].name === "Fire II")));
 console.log("PASS catalogue loading/export, prerequisite graph, tier damage comparisons, basic proficiency, encounter reset, lifetime counters, exploration steps, serialization and cross-encounter effects.");
+
+const open = R.create(); open.aren.x = 8; open.aren.y = 7;
+for (const [id, skill] of Object.entries(R.skills).filter(([, skill]) => skill.shape === "burst")) {
+    const tiles = R.footprint(open, open.aren, id, { x: 8, y: 7 });
+    assert.equal(tiles.length, skill.areaRadius === 2 ? 21 : 5);
+    assert.ok(tiles.every(tile => (tile.x - 8) ** 2 + (tile.y - 7) ** 2 <= (skill.areaRadius === 2 ? 6.25 : 1)));
+    assert.equal(Math.max(...tiles.map(t => t.x)) - Math.min(...tiles.map(t => t.x)) + 1, skill.areaRadius * 2 + 1);
+    if (skill.kind === "damage" && skill.areaRadius === 2) assert.equal(skill.power, Math.floor(6 * skill.tier * 0.75));
+}
+console.log("PASS targeted circular sizes and maximum-tier power tradeoff");
+
+assert.ok(data.source113.areaRadius < data.source105.areaRadius && data.source113.power > data.source105.power, "Blizzard III retains compact power while Flame III trades power for coverage");

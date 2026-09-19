@@ -35,10 +35,12 @@
     "prerequisite": "haste",
     "sourceId": 89,
     "tier": 2,
-    "delivery": "ranged"
+    "delivery": "ranged",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "cut": {
-    "name": "Sword Cut",
+    "name": "Slash",
     "pool": "sp",
     "cost": 1,
     "power": 12,
@@ -85,7 +87,7 @@
     "delivery": "ranged"
   },
   "jab": {
-    "name": "Quick Jab",
+    "name": "Quick Slash",
     "pool": "sp",
     "cost": 2,
     "power": 12,
@@ -109,7 +111,7 @@
     "delivery": "melee"
   },
   "whirlwind": {
-    "name": "Whirlwind",
+    "name": "Whirlwind Slash",
     "pool": "sp",
     "cost": 4,
     "power": 16,
@@ -132,7 +134,9 @@
     "prerequisite": "light",
     "sourceId": 144,
     "tier": 1,
-    "delivery": "ranged"
+    "delivery": "ranged",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "brace": {
     "name": "Brace",
@@ -146,7 +150,7 @@
     "delivery": "melee"
   },
   "sweep": {
-    "name": "Heavy Swing",
+    "name": "Heavy Slash",
     "pool": "sp",
     "cost": 4,
     "power": 16,
@@ -205,7 +209,9 @@
     "delivery": "ranged",
     "sourceId": 56,
     "shape": "burst",
-    "prerequisite": "mend"
+    "prerequisite": "mend",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source57": {
     "name": "Recover II",
@@ -218,7 +224,9 @@
     "delivery": "ranged",
     "sourceId": 57,
     "shape": "burst",
-    "prerequisite": "source56"
+    "prerequisite": "source56",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source58": {
     "name": "Recover III",
@@ -231,7 +239,9 @@
     "delivery": "ranged",
     "sourceId": 58,
     "shape": "burst",
-    "prerequisite": "source57"
+    "prerequisite": "source57",
+    "areaRadius": 2,
+    "areaProfile": "wide"
   },
   "source65": {
     "name": "Raise II",
@@ -280,7 +290,9 @@
     "delivery": "ranged",
     "sourceId": 103,
     "shape": "burst",
-    "prerequisite": "spark"
+    "prerequisite": "spark",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source104": {
     "name": "Flame II",
@@ -293,20 +305,24 @@
     "delivery": "ranged",
     "sourceId": 104,
     "shape": "burst",
-    "prerequisite": "source103"
+    "prerequisite": "source103",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source105": {
     "name": "Flame III",
     "pool": "mp",
     "cost": 12,
-    "power": 18,
+    "power": 13,
     "range": 4,
     "kind": "damage",
     "tier": 3,
     "delivery": "ranged",
     "sourceId": 105,
     "shape": "burst",
-    "prerequisite": "source104"
+    "prerequisite": "source104",
+    "areaRadius": 2,
+    "areaProfile": "wide"
   },
   "source107": {
     "name": "Ice I",
@@ -354,7 +370,9 @@
     "delivery": "ranged",
     "sourceId": 111,
     "shape": "burst",
-    "prerequisite": "source107"
+    "prerequisite": "source107",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source112": {
     "name": "Blizzard II",
@@ -367,7 +385,9 @@
     "delivery": "ranged",
     "sourceId": 112,
     "shape": "burst",
-    "prerequisite": "source111"
+    "prerequisite": "source111",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source113": {
     "name": "Blizzard III",
@@ -380,7 +400,9 @@
     "delivery": "ranged",
     "sourceId": 113,
     "shape": "burst",
-    "prerequisite": "source112"
+    "prerequisite": "source112",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source115": {
     "name": "Thunder I",
@@ -428,7 +450,9 @@
     "delivery": "ranged",
     "sourceId": 119,
     "shape": "burst",
-    "prerequisite": "source115"
+    "prerequisite": "source115",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source120": {
     "name": "Spark II",
@@ -441,20 +465,24 @@
     "delivery": "ranged",
     "sourceId": 120,
     "shape": "burst",
-    "prerequisite": "source119"
+    "prerequisite": "source119",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source121": {
     "name": "Spark III",
     "pool": "mp",
     "cost": 12,
-    "power": 18,
+    "power": 13,
     "range": 4,
     "kind": "damage",
     "tier": 3,
     "delivery": "ranged",
     "sourceId": 121,
     "shape": "burst",
-    "prerequisite": "source120"
+    "prerequisite": "source120",
+    "areaRadius": 2,
+    "areaProfile": "wide"
   },
   "source123": {
     "name": "Water I",
@@ -490,20 +518,24 @@
     "delivery": "ranged",
     "sourceId": 126,
     "shape": "burst",
-    "prerequisite": "source123"
+    "prerequisite": "source123",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source127": {
     "name": "Wave II",
     "pool": "mp",
     "cost": 10,
-    "power": 12,
+    "power": 9,
     "range": 4,
     "kind": "damage",
     "tier": 2,
     "delivery": "ranged",
     "sourceId": 127,
     "shape": "burst",
-    "prerequisite": "source126"
+    "prerequisite": "source126",
+    "areaRadius": 2,
+    "areaProfile": "wide"
   },
   "source129": {
     "name": "Stone I",
@@ -539,7 +571,9 @@
     "delivery": "ranged",
     "sourceId": 132,
     "shape": "burst",
-    "prerequisite": "source129"
+    "prerequisite": "source129",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source133": {
     "name": "Quake II",
@@ -552,7 +586,9 @@
     "delivery": "ranged",
     "sourceId": 133,
     "shape": "burst",
-    "prerequisite": "source132"
+    "prerequisite": "source132",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source135": {
     "name": "Wind I",
@@ -588,20 +624,24 @@
     "delivery": "ranged",
     "sourceId": 138,
     "shape": "burst",
-    "prerequisite": "source135"
+    "prerequisite": "source135",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source139": {
     "name": "Tornado II",
     "pool": "mp",
     "cost": 10,
-    "power": 12,
+    "power": 9,
     "range": 4,
     "kind": "damage",
     "tier": 2,
     "delivery": "ranged",
     "sourceId": 139,
     "shape": "burst",
-    "prerequisite": "source138"
+    "prerequisite": "source138",
+    "areaRadius": 2,
+    "areaProfile": "wide"
   },
   "source142": {
     "name": "Saint II",
@@ -626,7 +666,9 @@
     "delivery": "ranged",
     "sourceId": 145,
     "shape": "burst",
-    "prerequisite": "burst"
+    "prerequisite": "burst",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source147": {
     "name": "Shade I",
@@ -662,7 +704,9 @@
     "delivery": "ranged",
     "sourceId": 150,
     "shape": "burst",
-    "prerequisite": "source147"
+    "prerequisite": "source147",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source151": {
     "name": "Darkness II",
@@ -675,7 +719,9 @@
     "delivery": "ranged",
     "sourceId": 151,
     "shape": "burst",
-    "prerequisite": "source150"
+    "prerequisite": "source150",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source153": {
     "name": "Burst I",
@@ -711,7 +757,9 @@
     "delivery": "ranged",
     "sourceId": 156,
     "shape": "burst",
-    "prerequisite": "source153"
+    "prerequisite": "source153",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source157": {
     "name": "Nuke II",
@@ -724,7 +772,9 @@
     "delivery": "ranged",
     "sourceId": 157,
     "shape": "burst",
-    "prerequisite": "source156"
+    "prerequisite": "source156",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source172": {
     "name": "Strong Attack",
@@ -739,7 +789,7 @@
     "shape": "front"
   },
   "source173": {
-    "name": "Slash",
+    "name": "Sweeping Slash",
     "pool": "sp",
     "cost": 3,
     "power": 8,
@@ -887,7 +937,9 @@
     "delivery": "ranged",
     "sourceId": 227,
     "shape": "burst",
-    "prerequisite": "jab"
+    "prerequisite": "jab",
+    "areaRadius": 1,
+    "areaProfile": "compact"
   },
   "source228": {
     "name": "Team Shot",
@@ -905,13 +957,15 @@
     "name": "Rain Shot",
     "pool": "sp",
     "cost": 12,
-    "power": 18,
+    "power": 13,
     "range": 4,
     "kind": "damage",
     "tier": 3,
     "delivery": "ranged",
     "sourceId": 229,
     "shape": "burst",
-    "prerequisite": "jab"
+    "prerequisite": "jab",
+    "areaRadius": 2,
+    "areaProfile": "wide"
   }
 }

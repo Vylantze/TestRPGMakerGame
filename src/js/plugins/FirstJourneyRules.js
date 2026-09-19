@@ -13,10 +13,10 @@
         Object.assign(skills, data);
         if (!nodeRuntime) extendJobs();
     }
-    if (nodeRuntime) loadSkills(require("../../data/TestSkills.json"));
+    if (nodeRuntime) loadSkills(require("./Skills.json"));
     else {
         globalThis.$dataTestSkills = null;
-        DataManager._databaseFiles.push({ name: "$dataTestSkills", src: "TestSkills.json" });
+        DataManager._databaseFiles.push({ name: "$dataTestSkills", src: "../js/plugins/Skills.json" });
         const onLoad = DataManager.onLoad;
         DataManager.onLoad = function(object) {
             onLoad.call(this, object);
@@ -134,7 +134,7 @@
         const active = enemies(state).some(enemy => enemy.active);
         if (active !== state.combat) {
             state.combat = active;
-            if (active) state.turn = 0;
+            if (active) state.turn = 1;
             log(state, active ? "Combat begins. Each action advances one turn." : "Combat ends. You can change your loadout.");
             checkpoint(state, active ? "combat-start" : "combat-end");
         }
@@ -159,8 +159,9 @@
         else if (["around", "burst"].includes(skill.shape)) {
             const center = skill.shape === "around" ? user : target;
             tiles = [];
-            for (let y = -1; y <= 1; y++) for (let x = -1; x <= 1; x++) {
-                if (skill.shape === "burst" || x || y) tiles.push({ x: center.x + x, y: center.y + y });
+            const radius = skill.shape === "burst" ? Math.max(1, Math.min(2, skill.areaRadius || 1)) : 1;
+            for (let y = -radius; y <= radius; y++) for (let x = -radius; x <= radius; x++) {
+                if (skill.shape === "burst" ? x * x + y * y <= (radius === 2 ? 6.25 : 1) : x || y) tiles.push({ x: center.x + x, y: center.y + y });
             }
         } else tiles = [{ x: target.x, y: target.y }];
         const origin = skill.shape === "burst" ? target : user;
@@ -438,7 +439,7 @@
             }
         }
         combatCheck(state);
-        if (state.combat) { state.turn++; state.totalRounds++; }
+        if (state.combat) state.totalRounds++;
         const previous = { x: state.aren.x, y: state.aren.y };
         const entries = [{ unitId: "aren", action }, { unitId: "mira", action: miraAction || { type: action.type === "move" ? "follow" : "auto", target: previous } }, ...enemies(state).filter(e => e.active).map(e => ({ unitId: e.id, action: { type: "enemy" } }))].filter(entry => [...party(state), ...area(state).enemies].find(unit => unit.id === entry.unitId)?.hp > 0);
         if (!state.combat) {
@@ -467,7 +468,10 @@
             for (const unit of [...party(state), ...area(state).enemies]) {
                 if (unit.speedEffect && unit.speedEffect.applied < state.totalRounds && --unit.speedEffect.remaining <= 0) unit.speedEffect = null;
             }
-            endRound(state); return false;
+            const encounterMap = state.mapId;
+            endRound(state);
+            if (state.combat && state.mapId === encounterMap) state.turn++;
+            return false;
         }
         executeAction(state, round.entries[round.index++]);
         return true;

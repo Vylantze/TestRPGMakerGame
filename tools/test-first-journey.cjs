@@ -228,7 +228,7 @@ test("AoE faction rules apply to enemy damage, healing, buffs and revival", () =
             R.use(s, s.aren, "testSupport", s.aren);
             if (kind === "guard") assert.equal(s.mira.guard, 3);
             else assert.ok(s.mira.hp > 0);
-            assert.deepEqual(R.affected(s, foe, "testSupport", s.aren).map(u => u.id), ["enemy0"]);
+            assert.deepEqual(R.affected(s, foe, "testSupport", foe).map(u => u.id), ["enemy0"]);
         } finally { delete R.skills.testSupport; }
     }
 });
@@ -277,7 +277,7 @@ test("Only combat actions increase the round counter", () => {
     const s = R.create(); R.move(s, 1, 0); R.finishTurn(s); R.cast(s, "spark", { x: 10, y: 7 });
     assert.equal(s.turn, 0);
     R.area(s).enemies = [{ id: "enemy0", name: "Dummy", x: 10, y: 7, hp: 30, maxHp: 30, sp: 0, mp: 0, level: 1, job: "fighter", step: 0, active: true }];
-    R.finishTurn(s); assert.equal(s.turn, 1);
-    R.area(s).enemies = []; R.combatCheck(s); R.finishTurn(s); assert.equal(s.turn, 1);
+    R.finishTurn(s); assert.equal(s.turn, 2);
+    R.area(s).enemies = []; R.combatCheck(s); R.finishTurn(s); assert.equal(s.turn, 2);
 });
 console.log(passed + " rule tests passed.");

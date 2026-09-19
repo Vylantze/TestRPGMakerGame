@@ -40,16 +40,21 @@ applies to party and enemy attacks, even empty or wall-clipped casts. Both
 pools must be sufficient; costs are shown together in skill selection.
 Healing and support buffs retain their normal costs. Only combat actions
 increase round counters. The timeline shows the current encounter round, reset
-to 0 at every combat start. The separate Stats window shows cumulative combat
+to 1 at every combat start. The separate Stats window shows cumulative combat
 rounds and successful exploration steps; turns, blocked moves, casts, waits,
 and follower steps do not add exploration steps.
+
+Targeted AoEs use compact or wide circular areas (up to five tiles across each axis).
+Higher tiers offer both compact, powerful attacks and wider, weaker variants.
+The skill menu remembers each character’s last selected skill across targeting
+cancellation and reopening, and stores the choice in saves.
 
 ## Skill data and Stats
 
 The field menu’s **Stats** item opens lifetime combat rounds and exploration
 steps. The skill journal displays tier-coloured proficiency bars.
 
-`src/data/TestSkills.json` contains the current 74-skill catalogue;
+`src/js/plugins/Skills.json` contains the current 74-skill catalogue;
 `src/data/Skills.json` is its generated RPG Maker editor export. The original
 database is archived in `Addons/FirstJourneyBackup/SkillArchive/`. See
 [skill catalogue and tuning](docs/SKILL_CATALOGUE.md) for sources, prerequisites,

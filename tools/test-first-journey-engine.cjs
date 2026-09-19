@@ -414,6 +414,14 @@ const server = http.createServer((req, res) => {
         assert.deepEqual(await page.evaluate(() => SceneManager._scene._journeyChoices._entries.map(e => e.label)), await page.evaluate(() => ["Adventure Stats", "Total combat rounds: " + $gameSystem._firstJourney.totalRounds, "Exploration steps: " + $gameSystem._firstJourney.explorationSteps, "Back"]));
         await page.screenshot({ path: path.join(output, "adventure-stats.png") });
         await press("Escape"); await press("Escape");
+        await press("a");
+        await page.evaluate(() => { const win = SceneManager._scene._journeyChoices; win.select(win._entries.findIndex(e => e.skillId === "spark")); });
+        await press("Enter"); await press("Escape");
+        assert.equal(await page.evaluate(() => { const win = SceneManager._scene._journeyChoices; return win._entries[win.index()].skillId; }), "spark", "Target cancellation remembers the selected skill");
+        await press("Escape"); await press("a");
+        assert.equal(await page.evaluate(() => { const win = SceneManager._scene._journeyChoices; return win._entries[win.index()].skillId; }), "spark", "Reopening selects the last skill");
+        assert.equal(await page.evaluate(() => JSON.parse(JSON.stringify(DataManager.makeSaveContents().system._firstJourney)).aren.lastSkill), "spark");
+        await press("Escape");
         const originalKnowledge = await page.evaluate(() => JSON.parse(JSON.stringify($gameSystem._firstJourney.knowledge)));
         await page.evaluate(() => {
             const s = $gameSystem._firstJourney;
@@ -424,7 +432,16 @@ const server = http.createServer((req, res) => {
         await page.screenshot({ path: path.join(output, "journal-proficiency.png") });
         await page.evaluate(knowledge => { $gameSystem._firstJourney.knowledge = knowledge; }, originalKnowledge);
         await press("Escape");
+        await page.evaluate(() => { const s = $gameSystem._firstJourney; s.godMode = true; FirstJourneyRules.travel(s, 1, 8, 7); SceneManager._scene.syncJourney(); });
+        await page.waitForFunction(() => $gameMap.mapId() === 1 && !$gamePlayer.isTransferring() && SceneManager._scene._journeyOverlay);
+        await page.evaluate(() => {
+            const scene = SceneManager._scene; scene.beginJourneyTargeting("source105");
+            scene._journeyTarget.index = scene._journeyTarget.targets.findIndex(tile => tile.x === 8 && tile.y === 7);
+        });
+        assert.equal(await page.evaluate(() => FirstJourneyRules.footprint($gameSystem._firstJourney, $gameSystem._firstJourney.aren, "source105", { x: 8, y: 7 }).length), 21);
         await page.waitForTimeout(300);
+        await page.screenshot({ path: path.join(output, "wide-circular-aoe.png") });
+        await press("Escape"); await press("Escape");
         assert.deepEqual(errors, []);
         console.log("PASS MZ boot, new game, movement, all menus, direct companion commands, skill hover, combat menu, turn-order inspection, directional aiming, transfer, skill targeting, combat checkpoint, engine save/load, defeat return, rest, shopping and ending; no console errors.");
     } catch (error) {

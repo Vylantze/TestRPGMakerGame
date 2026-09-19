@@ -73,7 +73,7 @@ members. The prototype implements Priestess, Fighter, and Supporter tables:
 | Job | Level 1 | Later techniques |
 | --- | --- | --- |
 | Priestess | Heal I, Saint I | Starlight I at 2; Heal II at 3; Revive at 5 |
-| Fighter | Quick Jab | Brace and Piercing Thrust at 2; Heavy Swing and Whirlwind at 3 |
+| Fighter | Quick Slash | Brace and Piercing Thrust at 2; Heavy Slash and Whirlwind at 3 |
 | Supporter | Fire I, Haste, Slow | Quickening Chorus at 3 |
 
 Mira remains a Priestess. A goblin chanter in the shrine is a Supporter, providing
@@ -128,13 +128,13 @@ point, so initial learning requires 300 units and mastery requires 1,800 units.
 Aren can equip a limited number of copied skills, initially two. Capacity grows
 by one slot every two levels. The player may change the loadout only outside
 combat. Learning a technique does not automatically equip it. His starting
-**Sword Cut** and **Fire I** are always available and use no copied-skill slots.
+**Slash** and **Fire I** are always available and use no copied-skill slots.
 
 ## Resources and recovery
 
 Characters have **Hit Points (HP)**, **Stamina (SP)**, and **Mana (MP)**.
 Physical techniques consume SP and spells consume MP. Even the fallback basics
-cost resources: Sword Cut costs 1 SP, and Fire I costs 1 MP. There is no free
+cost resources: Slash costs 1 SP, and Fire I costs 1 MP. There is no free
 attack when the relevant pool is empty. Resource exhaustion is an intended
 expedition constraint rather than an exception to the rules.
 
@@ -185,12 +185,12 @@ magic continues to move its cursor instead.
 
 | Shape | Example | Behavior |
 | --- | --- | --- |
-| One tile ahead | Sword Cut, Quick Jab | Facing determines the affected square |
+| One tile ahead | Slash, Quick Slash | Facing determines the affected square |
 | One selected tile at range | Fire I, Saint I, Heal I | Aim within four grid steps and line of sight |
 | Two tiles ahead | Piercing Thrust | Hits along the facing direction |
-| Three tiles across ahead | Heavy Swing | Rotates the row with the caster's facing |
+| Three tiles across ahead | Heavy Slash | Rotates the row with the caster's facing |
 | Surrounding area | Whirlwind | Hits the eight neighboring tiles |
-| Area around a selected tile | Starlight I | A 3×3 footprint centered within four steps |
+| Area around a selected tile | Starlight I | A five-tile circle centered within four steps |
 
 Offensive AoEs affect enemies only, relative to the caster. Healing and buff AoEs
 affect allies only. Neutral villagers are excluded from offensive AoEs.
@@ -214,7 +214,7 @@ applies to party and enemy attacks, even empty or wall-clipped casts. Both
 pools must be sufficient; costs are shown together in skill selection.
 Healing and support buffs retain their normal costs. Only combat actions
 increase round counters. The timeline shows the current encounter round, reset
-to 0 at every combat start. The separate Stats window shows cumulative combat
+to 1 at every combat start. The separate Stats window shows cumulative combat
 rounds and successful exploration steps; turns, blocked moves, casts, waits,
 and follower steps do not add exploration steps.
 
@@ -260,7 +260,7 @@ Supporter skills introduce three-round speed effects:
 | --- | --- | --- |
 | Haste | 3 MP | +4 Speed to one selected tile |
 | Slow | 3 MP | −4 Speed to one selected tile |
-| Quickening Chorus | 6 MP | +3 Speed to allies in a 3×3 selected area |
+| Quickening Chorus | 6 MP | +3 Speed to allies in a five-tile selected circle |
 
 These effects influence the next three combat rounds rather than reordering the
 current one. New speed effects replace existing ones; they do not stack. Rest

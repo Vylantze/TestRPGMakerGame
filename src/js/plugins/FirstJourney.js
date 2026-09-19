@@ -190,6 +190,7 @@
         this.choices(ids.map(id => ({ label: R.skills[id].name + "  " + R.costText(id),
             skillId: id, enabled: unit.hp > 0 && R.canAfford(unit, id), run: () => this.beginJourneyTargeting(id)
         })), () => { this._journeyPreview = null; this._journeyOverlay?.bitmap.clear(); if (this._journeyPendingAction) this.miraCommandMenu(); }, 296);
+        this._journeyChoices.select(Math.max(0, ids.indexOf(unit.lastSkill)));
     };
     Scene_Map.prototype.journal = function() {
         const s = state();
@@ -240,7 +241,7 @@
             { label: "Load", run: () => { this.closeJourneyChoices(); SceneManager.push(Scene_Load); } },
             { label: "Controls and rules", run: () => { this.closeJourneyChoices(); this.say([
                 "Tap to turn or step forward; hold to walk. Space: wait. A: skills.\nChoose a skill, aim its hitbox, then confirm. Empty casts work.\nTab: Mira commands • C: behavior • K: journal • I: potions",
-                "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Sword Cut costs SP; Fire I costs MP.",
+                "Enter: interact beside a rest, person or supplies. Walk into doorways.\nTown rests are free. Shrine rests cost one ration.\nWaiting restores nothing. Slash costs SP; Fire I costs MP.",
                 "Witness a basic skill 3 times to copy its form at 60% power.\nPractice raises it at 6/12/18 points to 80/100/120%.\nDebug units: watching +25; using +100.",
                 "Advanced skills need their prerequisite at 100% mastery.\nUntil then each observation adds 5/300 learning units.\nLoadouts change outside combat; starting attacks use no slots.",
                 "Combat actions resolve in descending Speed order.\nCancel from combat commands enters persistent Move.\nEnter reopens commands; Esc in Move opens the normal menu.",

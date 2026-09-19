@@ -109,13 +109,18 @@ applies to party and enemy attacks, even empty or wall-clipped casts. Both
 pools must be sufficient; costs are shown together in skill selection.
 Healing and support buffs retain their normal costs. Only combat actions
 increase round counters. The timeline shows the current encounter round, reset
-to 0 at every combat start. The separate Stats window shows cumulative combat
+to 1 at every combat start. The separate Stats window shows cumulative combat
 rounds and successful exploration steps; turns, blocked moves, casts, waits,
 and follower steps do not add exploration steps.
 
+Targeted AoEs use compact or wide circular areas (up to five tiles across each axis).
+Higher tiers offer both compact, powerful attacks and wider, weaker variants.
+The skill menu remembers each character’s last selected skill across targeting
+cancellation and reopening, and stores the choice in saves.
+
 ## Attack areas and entrances
 
-Sword Cut and Quick Jab only hit the tile immediately ahead. Arrow inputs
+Slash and Quick Slash only hit the tile immediately ahead. Arrow inputs
 during directional targeting turn Aren and rotate the footprint for free;
 confirming casts in that direction. Ranged ground targeting still moves the
 aim cursor instead. Enemy and
@@ -124,9 +129,9 @@ companion AI turn toward their intended target before attacking.
 | Skill | Area | Source |
 | --- | --- | --- |
 | Piercing Thrust | Both tiles directly ahead | Level 2 fighters |
-| Heavy Swing | Three tiles across in front, rotated with facing | Level 3 fighters |
+| Heavy Slash | Three tiles across in front, rotated with facing | Level 3 fighters |
 | Whirlwind | All eight surrounding tiles | Level 3 fighters |
-| Starlight I | A 3×3 square centered on a selected ground tile, within four walking steps | Mira at level 2 |
+| Starlight I | A five-tile circle centered on a selected ground tile, within four walking steps | Mira at level 2 |
 
 Offensive AoEs hit enemies only; healing and buff AoEs affect allies only, relative
 to the caster. Neutral villagers are excluded from offensive AoEs. Single-tile
@@ -158,7 +163,7 @@ is saved and an interaction creates an autosave.
 
 ## Resources and progression
 
-- Aren starts with Sword Cut (1 SP) and Fire I (1 MP). They never occupy copied
+- Aren starts with Slash (1 SP) and Fire I (1 MP). They never occupy copied
   skill slots. He has no free attack when the corresponding resource is empty.
 - Town rest is free. Both shrine camps consume one ration to fully restore
   the party's HP, SP and MP, including downed members. Rest is unavailable in
@@ -169,14 +174,14 @@ is saved and an interaction creates an autosave.
 - Mira starts with Heal I and Saint I; Starlight I arrives at level 2,
   Heal II at level 3 and
   Revive at level 5. The priestess and fighter job tables are shared with
-  humanoid enemies. Fighters learn Quick Jab at level 1, Brace and Piercing
-  Thrust at level 2, and Heavy Swing and Whirlwind at level 3.
+  humanoid enemies. Fighters learn Quick Slash at level 1, Brace and Piercing
+  Thrust at level 2, and Heavy Slash and Whirlwind at level 3.
 - Aren copies a skill's form, never taking it away from its original user.
   A visible use within seven grid steps gives one observation point. Walls
   block observation; Aren must be conscious. Three points unlock a basic skill.
 - Advanced skills accrue 0.05 observation points per witnessed use until their
   prerequisite reaches 100% mastery. Progress is retained and checked again
-  when prerequisites improve. Heavy Swing and Whirlwind require Quick Jab; Starlight I requires Light
+  when prerequisites improve. Heavy Slash and Whirlwind require Quick Slash; Starlight I requires Light
   Lance; Heal II and
   Revive require Heal I.
 - Understanding and proficiency are intentionally combined for this prototype.
@@ -209,7 +214,7 @@ them immediately through the testing statue.
 | --- | --- | --- |
 | Haste | 3 MP | Single tile within 4; +4 Speed for 3 rounds |
 | Slow | 3 MP | Single tile within 4; −4 Speed for 3 rounds |
-| Quickening Chorus | 6 MP | 3×3 allied area within 4; +3 Speed for 3 rounds |
+| Quickening Chorus | 6 MP | five-tile allied circle within 4; +3 Speed for 3 rounds |
 
 Copied versions scale with mastery. Chorus requires mastered Haste. A new
 speed effect replaces the existing one rather than stacking. Effects influence
